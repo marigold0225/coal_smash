@@ -16,10 +16,7 @@ using BatchMap = std::map<int, BatchData>;
 
 void ReadLine(const std::string &line, EventData &currentEvent);
 
-void readFile(const std::string &filename, std::map<int, EventData> &all_Events);
-
-void readParticleData(const std::string &filename,
-                      std::vector<ParticleData> &particles);
+void readFile_smash(const std::string &filename, std::map<int, EventData> &all_Events);
 
 void read_batch_size(const std::string &filename, int batchSize,
                      BatchMap &batches);

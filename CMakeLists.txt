@@ -10,6 +10,6 @@ add_executable(coal_smash
         include/read_particle_data.h
         src/read_config.cpp
         src/read_particle_data.cpp
-        src/coal.cpp
-        include/coal.h
+        src/coal_deutron.cpp
+        include/coal_deutron.h
         src/main.cpp)

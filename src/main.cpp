@@ -1,7 +1,7 @@
 //
 // Created by mafu on 12/13/2023.
 //
-#include "../include/coal.h"
+#include "../include/coal_deutron.h"
 #include <filesystem>
 
 int main() {
@@ -28,8 +28,10 @@ int main() {
         std::cout << "Using existing 'proton.dat' and 'neutron.dat' for "
                      "calculations."
                   << std::endl;
-        calculate_deuteron(protonFileName, neutronFileName, config_input,
-                           batchSize, d_mix_spv, d_mix_ptv);
+        if (config_input.rac_deuteron) {
+            calculate_deuteron(protonFileName, neutronFileName, config_input,
+                               batchSize, d_mix_spv, d_mix_ptv);
+        }
 
     } else {
         std::cout << "'proton.dat' or 'neutron.dat' not found, using "
@@ -37,13 +39,22 @@ int main() {
                   << std::endl;
 
         std::map<int, EventData> allEvents;
-        readFile(particle_file, allEvents);
+
+        if (config_input.calculation_mode == "smash") {
+            std::cout << "Using SMASH mode." << std::endl;
+            readFile_smash(particle_file, allEvents);
+        } else {
+            std::cout << "Unknown calculation mode." << std::endl;
+            return 1;
+        }
 
         std::cout << "Number of events:" << allEvents.size() << std::endl;
 
         extractParticlesFromEvents(allEvents, protonFileName, neutronFileName);
-        calculate_deuteron(protonFileName, neutronFileName, config_input,
-                           batchSize, d_mix_spv, d_mix_ptv);
+        if (config_input.rac_deuteron) {
+            calculate_deuteron(protonFileName, neutronFileName, config_input,
+                               batchSize, d_mix_spv, d_mix_ptv);
+        }
     }
 
     return 0;

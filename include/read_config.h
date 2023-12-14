@@ -4,7 +4,7 @@
 #pragma once
 #include "config_parser.h"
 typedef struct config_input {
-    //	char calculation_mode[20];
+    std::string calculation_mode;
     int mix_events;
     double rap_cut_nucl;
     double rap_cut_coal;
@@ -17,5 +17,5 @@ typedef struct config_input {
     bool rac_tritium;
     bool rac_helium;
 } config_in;
-void initialize_config_from_parser(config_in &config1,
-                                   const config_parser &config);
+void initialize_config_from_parser(config_in &config,
+                                   const config_parser &read_config_parser);

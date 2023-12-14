@@ -10,7 +10,7 @@
 void ReadLine(const std::string &line, EventData &currentEvent) {
     std::istringstream stream(line);
     ParticleData particle{};
-    double ncoll = NAN, form_time = NAN, xsecfac = NAN;
+    double n_coll = NAN, form_time = NAN, xsec_fac = NAN;
     int id = 0, proc_id_origin = 0, proc_type_origin = 0;
     int pdg_mother1   = 0;
     int pdg_mother2   = 0;
@@ -18,7 +18,7 @@ void ReadLine(const std::string &line, EventData &currentEvent) {
 
     stream >> particle.t >> particle.x >> particle.y >> particle.z >> particle.mass >>
             particle.p0 >> particle.px >> particle.py >> particle.pz >> particle.pdg >> id >>
-            particle.charge >> ncoll >> form_time >> xsecfac >> proc_id_origin >> proc_type_origin >>
+            particle.charge >> n_coll >> form_time >> xsec_fac >> proc_id_origin >> proc_type_origin >>
             particle.freeze_out_time >> pdg_mother1 >> pdg_mother2 >> baryon_number;
 
     if (!stream.fail()) {
@@ -28,7 +28,7 @@ void ReadLine(const std::string &line, EventData &currentEvent) {
     }
 }
 
-void readFile(const std::string &filename, std::map<int, EventData> &all_Events) {
+void readFile_smash(const std::string &filename, std::map<int, EventData> &all_Events) {
     std::ifstream file(filename);
     std::string line;
     EventData currentEvent;
@@ -60,60 +60,6 @@ void readFile(const std::string &filename, std::map<int, EventData> &all_Events)
     }
 }
 
-std::pair<std::map<int, int>, std::map<int, int>>
-countParticlesInEvents(const std::map<int, EventData> &allEvents) {
-    std::map<int, int> protonCountPerEvent;
-    std::map<int, int> neutronCountPerEvent;
-
-    for (const auto &[eventID, eventData]: allEvents) {
-        for (const auto &[pdgCode, particles]: eventData.particlesByType) {
-            const auto size = static_cast<int>(particles.size());
-            if (size < 0) {
-                throw std::runtime_error("Negative particle count");
-            }
-            if (pdgCode == 2212) {
-                protonCountPerEvent[eventID] += size;
-            } else if (pdgCode == 2112) {
-                neutronCountPerEvent[eventID] += size;
-            }
-        }
-    }
-
-    return {protonCountPerEvent, neutronCountPerEvent};
-}
-
-void readParticleData(const std::string &filename, std::vector<ParticleData> &particles) {
-    std::ifstream file(filename);
-    std::string line;
-    ParticleData particle{};
-
-    std::getline(file, line);
-
-    while (std::getline(file, line)) {
-        if (line.find("t x y z px py pz p0") != std::string::npos) {
-            continue;
-        }
-
-        if (std::istringstream iss(line); iss >> particle.freeze_out_time >> particle.x >>
-                                          particle.y >> particle.z >> particle.px >> particle.py >>
-                                          particle.pz >> particle.p0) {
-            particle.t      = 50;
-            particle.mass   = 0.938;
-            particle.pdg    = filename == "tem/proton.dat" ? 2212 : 2112;
-            particle.charge = filename == "tem/proton.dat" ? 1 : 0;
-            particles.push_back(particle);
-        }
-    }
-
-    file.close();
-}
-
-void loadParticleData(std::vector<ParticleData> &batchProtons,
-                      std::vector<ParticleData> &batchNeutrons) {
-    readParticleData("tem/proton.dat", batchProtons);
-    readParticleData("tem/neutron.dat", batchNeutrons);
-}
-
 void read_batch_size(const std::string &filename, int batchSize, BatchMap &batches) {
     std::ifstream file(filename);
     std::string line;
@@ -122,7 +68,7 @@ void read_batch_size(const std::string &filename, int batchSize, BatchMap &batch
     int eventCount   = 0;
 
     while (std::getline(file, line)) {
-        if (line.find("t x y z px py pz p0") != std::string::npos) {
+        if (line.find("t x y z px py pz p0 mass t_out") != std::string::npos) {
             eventCount++;
             if (eventCount > batchSize) {
                 batches[currentBatch].eventCount = eventCount - 1;
@@ -132,14 +78,17 @@ void read_batch_size(const std::string &filename, int batchSize, BatchMap &batch
             continue;
         }
 
-        if (std::istringstream iss(line); iss >> particle.freeze_out_time >> particle.x >>
+        if (std::istringstream iss(line); iss >> particle.t >> particle.x >>
                                           particle.y >> particle.z >> particle.px >> particle.py >>
-                                          particle.pz >> particle.p0) {
+                                          particle.pz >> particle.p0 >> particle.mass >> particle.freeze_out_time) {
 
-            particle.t      = 50;
-            particle.mass   = 0.938;
-            particle.pdg    = filename.find("tem/proton.dat") != std::string::npos ? 2212 : 2112;
-            particle.charge = filename.find("tem/proton.dat") != std::string::npos ? 1 : 0;
+            if (filename.find("proton") != std::string::npos) {
+                particle.pdg    = 2212;
+                particle.charge = 1;
+            } else if (filename.find("neutron") != std::string::npos) {
+                particle.pdg    = 2112;
+                particle.charge = 0;
+            }
             batches[currentBatch].particles.push_back(particle);
         }
     }

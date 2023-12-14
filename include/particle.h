@@ -8,7 +8,7 @@
 #include <map>
 #include <vector>
 
-struct ParticleData {
+typedef struct ParticleData {
     double t, x, y, z;
     double mass, p0, px, py, pz;
     int pdg, charge;
@@ -25,10 +25,15 @@ struct ParticleData {
                std::abs(py - other.py) > tolerance ||
                std::abs(pz - other.pz) > tolerance;
     }
-};
+} ParticleData;
 
+typedef struct DeutronData {
+    double t, x, y, z;
+    double p0, px, py, pz;
+    double probability;
+} DeutronData;
 
-struct EventData {
+typedef struct EventData {
     int eventID;
     std::map<int, std::vector<ParticleData>> particlesByType;
-};
+} EventData;
