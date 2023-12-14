@@ -7,9 +7,9 @@
 int main() {
     std::cout << "Current path is " << std::filesystem::current_path() << std::endl;
     const std::string config_file_name = "input/config.ini";
-    const std::string particle_file = "data/particle_lists.oscar";
-    const std::string protonFileName = "tem/proton.dat";
-    const std::string neutronFileName = "tem/neutron.dat";
+    const std::string particle_file    = "data/particle_lists.oscar";
+    const std::string protonFileName   = "tem/proton.dat";
+    const std::string neutronFileName  = "tem/neutron.dat";
 
     const config_parser config(config_file_name);
     config_in config_input;
@@ -21,7 +21,7 @@ int main() {
         d_mix_ptv[i] = config_input.d_mix_dpt / 2 + i * config_input.d_mix_dpt;
     }
 
-    const bool proton_exists = std::filesystem::exists(protonFileName);
+    const bool proton_exists  = std::filesystem::exists(protonFileName);
     const bool neutron_exists = std::filesystem::exists(neutronFileName);
 
     if (proton_exists && neutron_exists) {
@@ -48,4 +48,3 @@ int main() {
 
     return 0;
 }
-

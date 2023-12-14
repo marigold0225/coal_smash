@@ -20,19 +20,11 @@ void extractParticlesFromEvents(std::map<int, EventData> &all_Events,
                                 const std::string &protonFileName,
                                 const std::string &neutronFileName);
 
-void processBatches(const std::vector<ParticleData> &protons,
-                    const std::vector<ParticleData> &neutrons,
-                    const std::map<int, int> &protonCounts,
-                    const std::map<int, int> &neutronCounts,
-                    const config_in &config_input,
-                    std::vector<double> &d_mix_spv);
-
-void calcute_one_batch(const std::vector<ParticleData> &protons,
-                       const std::vector<ParticleData> &neutrons, const config_in &config_input,
-                       std::vector<double> &d_mix_spv, const std::vector<double> &d_mix_ptv,
-                       double &batch_deutrons, int eventsInBatch);
+void calculate_one_batch(const std::vector<ParticleData> &protons,
+                         const std::vector<ParticleData> &neutrons, const config_in &config_input,
+                         std::vector<double> &d_mix_spv, const std::vector<double> &d_mix_ptv,
+                         double &batch_deutrons, int eventsInBatch);
 
 void calculate_deuteron(const std::string &protonFile, const std::string &neutronFile,
                         const config_in &configInput, int batchSize,
                         std::vector<double> &dMixSpv, const std::vector<double> &dMixPtv);
-

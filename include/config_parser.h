@@ -36,11 +36,11 @@ public:
 
         std::string line;
         while (std::getline(file, line)) {
-            line = line.substr(0, line.find(';'));
+            line             = line.substr(0, line.find(';'));
             const size_t pos = line.find('=');
             if (pos != std::string::npos) {
-                std::string key = line.substr(0, pos);
-                std::string value = line.substr(pos + 1);
+                std::string key         = line.substr(0, pos);
+                std::string value       = line.substr(pos + 1);
                 config_data_[trim(key)] = trim(value);
             }
         }
@@ -51,8 +51,7 @@ public:
     [[nodiscard]] std::string get(const std::string &key) const {
         try {
             return config_data_.at(key);
-        }
-        catch (const std::out_of_range &) {
+        } catch (const std::out_of_range &) {
             return "";
         }
     }
@@ -60,8 +59,7 @@ public:
     [[nodiscard]] int get_int(const std::string &key) const {
         try {
             return std::stoi(config_data_.at(key));
-        }
-        catch (const std::out_of_range &) {
+        } catch (const std::out_of_range &) {
             return 0;
         }
     }
@@ -69,8 +67,7 @@ public:
     [[nodiscard]] double get_double(const std::string &key) const {
         try {
             return std::stod(config_data_.at(key));
-        }
-        catch (const std::out_of_range &) {
+        } catch (const std::out_of_range &) {
             return 0.0;
         }
     }
@@ -79,10 +76,8 @@ public:
         try {
             const std::string value = config_data_.at(key);
             return value == "True" || value == "true" || value == "1";
-        }
-        catch (const std::out_of_range &) {
+        } catch (const std::out_of_range &) {
             return false;
         }
     }
 };
-

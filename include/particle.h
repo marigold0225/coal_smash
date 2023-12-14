@@ -27,6 +27,7 @@ struct ParticleData {
     }
 };
 
+
 struct EventData {
     int eventID;
     std::map<int, std::vector<ParticleData>> particlesByType;
