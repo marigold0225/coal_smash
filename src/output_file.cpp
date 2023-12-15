@@ -14,7 +14,7 @@
 //    output_file.close();
 //}
 
-void output_deutrons(const std::vector<DeutronData> &deutrons, const std::string &filename) {
+void output_deutrons(const std::vector<ParticleData> &deutrons, const std::string &filename) {
     std::ofstream output_file(filename, std::ios::out);
     if (output_file.is_open()) {
         output_file << "t x y z px py pz p0 probability\n";

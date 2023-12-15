@@ -7,44 +7,6 @@
 #include <iomanip>
 #include <queue>
 #include <random>
-ParticleData lorentz_boost(const double beta_x, const double beta_y, const double beta_z,
-                           const ParticleData &p) {
-    ParticleData boost_p = p;
-    if (const double beta2 = beta_x * beta_x + beta_y * beta_y + beta_z * beta_z; beta2 > 1.0e-5) {
-        const double gamma   = 1.0 / sqrt(1.0 - beta2);
-        const double x_lam00 = gamma;
-        const double x_lam01 = -gamma * beta_x;
-        const double x_lam02 = -gamma * beta_y;
-        const double x_lam03 = -gamma * beta_z;
-        const double x_lam11 = 1.0 + (gamma - 1.0) * beta_x * beta_x / beta2;
-        const double x_lam22 = 1.0 + (gamma - 1.0) * beta_y * beta_y / beta2;
-        const double x_lam33 = 1.0 + (gamma - 1.0) * beta_z * beta_z / beta2;
-        const double x_lam12 = (gamma - 1.0) * beta_x * beta_y / beta2;
-        const double x_lam13 = (gamma - 1.0) * beta_x * beta_z / beta2;
-        const double x_lam23 = (gamma - 1.0) * beta_y * beta_z / beta2;
-        const double new_t =
-                p.freeze_out_time * x_lam00 + p.x * x_lam01 + p.y * x_lam02 + p.z * x_lam03;
-        const double new_x =
-                p.freeze_out_time * x_lam01 + p.x * x_lam11 + p.y * x_lam12 + p.z * x_lam13;
-        const double new_y =
-                p.freeze_out_time * x_lam02 + p.x * x_lam12 + p.y * x_lam22 + p.z * x_lam23;
-        const double new_z =
-                p.freeze_out_time * x_lam03 + p.x * x_lam13 + p.y * x_lam23 + p.z * x_lam33;
-        const double new_p0     = p.p0 * x_lam00 + p.px * x_lam01 + p.py * x_lam02 + p.pz * x_lam03;
-        const double new_px     = p.p0 * x_lam01 + p.px * x_lam11 + p.py * x_lam12 + p.pz * x_lam13;
-        const double new_py     = p.p0 * x_lam02 + p.px * x_lam12 + p.py * x_lam22 + p.pz * x_lam23;
-        const double new_pz     = p.p0 * x_lam03 + p.px * x_lam13 + p.py * x_lam23 + p.pz * x_lam33;
-        boost_p.freeze_out_time = new_t;
-        boost_p.x               = new_x;
-        boost_p.y               = new_y;
-        boost_p.z               = new_z;
-        boost_p.p0              = new_p0;
-        boost_p.px              = new_px;
-        boost_p.py              = new_py;
-        boost_p.pz              = new_pz;
-    }
-    return boost_p;
-}
 
 void update_d_mix_spv(const double pt, const double probability, const config_in &config_input,
                       std::vector<double> &d_mix_spv) {
@@ -87,13 +49,13 @@ calculate_differences(const ParticleData &p1, const ParticleData &p2) {
     return {diff_x, diff_y, diff_z, diff_px, diff_py, diff_pz};
 }
 
-DeutronData calculate_info_deutron(const ParticleData &p1, const ParticleData &p2,
-                                   const config_in &config_input, std::vector<double> &d_mix_spv) {
-    DeutronData deutron_data{};
+ParticleData calculate_info_deutron(const ParticleData &p1, const ParticleData &p2,
+                                    const config_in &config_input, std::vector<double> &d_mix_spv) {
+    ParticleData deutron_data{};
     // Rapidity checks
     if (std::abs(calculate_rap(p1.p0, p1.pz)) > config_input.rap_cut_nucl ||
         std::abs(calculate_rap(p2.p0, p2.pz)) > config_input.rap_cut_nucl) {
-        return DeutronData{};
+        return ParticleData{};
     }
 
     const double px_total = p1.px + p2.px;
@@ -102,16 +64,16 @@ DeutronData calculate_info_deutron(const ParticleData &p1, const ParticleData &p
     const double p0_total = p1.p0 + p2.p0;
     //Deutron rapidity check
     if (std::abs(calculate_rap(p0_total, pz_total)) > config_input.rap_cut_coal) {
-        return DeutronData{};
+        return ParticleData{};
     }
 
-    const double beta_x          = px_total / p0_total;
-    const double beta_y          = py_total / p0_total;
-    const double beta_z          = pz_total / p0_total;
-    ParticleData boosted_proton  = lorentz_boost(beta_x, beta_y, beta_z, p1);
-    ParticleData boosted_neutron = lorentz_boost(beta_x, beta_y, beta_z, p2);
+    const double beta_x = px_total / p0_total;
+    const double beta_y = py_total / p0_total;
+    const double beta_z = pz_total / p0_total;
 
-    const double t_max = std::max(boosted_proton.freeze_out_time, boosted_neutron.freeze_out_time);
+    ParticleData boosted_proton  = p1.lorentz_boost(beta_x, beta_y, beta_z);
+    ParticleData boosted_neutron = p2.lorentz_boost(beta_x, beta_y, beta_z);
+    const double t_max           = std::max(boosted_proton.freeze_out_time, boosted_neutron.freeze_out_time);
 
     boosted_proton.update_position(t_max);
     boosted_neutron.update_position(t_max);
@@ -122,36 +84,34 @@ DeutronData calculate_info_deutron(const ParticleData &p1, const ParticleData &p
     const double diff_p = sqrt(diff_px * diff_px + diff_py * diff_py + diff_pz * diff_pz);
 
     if (diff_p > config_input.cut_dp * 0.19733 / config_input.rms || diff_r > config_input.cut_dr * config_input.rms) {
-        return DeutronData{};
+        return ParticleData{};
     }
     deutron_data.probability = calculate_pro_deutron(diff_r, diff_p, config_input.rms);
 
     deutron_data.calculate_deutron_data(boosted_proton, boosted_neutron);
-    //DeutronData boosted_deutron = lorentz_boost(-beta_x, -beta_y, -beta_z, deutron_data);
+    //ParticleData boosted_deutron = deutron_data.lorentz_boost(-beta_x, -beta_y, -beta_z);
     const double pt = sqrt(px_total * px_total + py_total * py_total);
-
     update_d_mix_spv(pt, deutron_data.probability, config_input, d_mix_spv);
-
     return deutron_data;
 }
 void calculate_one_batch(const std::vector<ParticleData> &protons,
                          const std::vector<ParticleData> &neutrons,
                          const config_in &config_input, std::vector<double> &d_mix_spv,
                          const std::vector<double> &d_mix_ptv, double &batch_deutrons,
-                         int eventsInBatch, std::vector<DeutronData> &deutrons) {
+                         int eventsInBatch, std::vector<ParticleData> &deutrons) {
     batch_deutrons      = 0.0;
     const int mixEvents = eventsInBatch * eventsInBatch;
-    auto compare        = [](const DeutronData &a, const DeutronData &b) {
+    auto compare        = [](const ParticleData &a, const ParticleData &b) {
         return a.probability < b.probability;
     };
-    std::priority_queue<DeutronData, std::vector<DeutronData>, decltype(compare)> deuteron_queue(
+    std::priority_queue<ParticleData, std::vector<ParticleData>, decltype(compare)> deuteron_queue(
             compare);
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(0.0, 1.0);
     for (const auto &proton: protons) {
         for (const auto &neutron: neutrons) {
-            DeutronData deutron = calculate_info_deutron(proton, neutron, config_input, d_mix_spv);
+            ParticleData deutron = calculate_info_deutron(proton, neutron, config_input, d_mix_spv);
             batch_deutrons += deutron.probability;
             if (deutron.probability > 0) {
                 deuteron_queue.push(deutron);
@@ -177,9 +137,9 @@ void calculate_one_batch(const std::vector<ParticleData> &protons,
 void calculate_deuteron(const std::string &protonFile,
                         const std::string &neutronFile,
                         const config_in &configInput,
-                        const int batchSize, std::vector<double> &dMixSpv,
+                        int batchSize, std::vector<double> &dMixSpv,
                         const std::vector<double> &dMixPtv,
-                        std::vector<DeutronData> &deutrons) {
+                        std::vector<ParticleData> &deutrons) {
     BatchMap protonBatches, neutronBatches;
     double total_deutrons = 0.0;
     int total_batches     = 0;

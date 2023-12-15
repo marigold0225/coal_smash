@@ -10,6 +10,7 @@ int main() {
     const std::string particle_file    = "data/particle_lists.oscar";
     const std::string protonFileName   = "data/proton.dat";
     const std::string neutronFileName  = "data/neutron.dat";
+    //const std::string deuteronFileName = "data/deuteron.dat";
 
     const config_parser config(config_file_name);
     config_in config_input;
@@ -17,7 +18,7 @@ int main() {
     const int batchSize = config_input.mix_events;
     std::vector<double> d_mix_spv(100, 0.0);
     std::vector<double> d_mix_ptv(100);
-    std::vector<DeutronData> deutrons;
+    std::vector<ParticleData> deutrons;
     for (int i = 0; i < 100; ++i) {
         d_mix_ptv[i] = config_input.d_mix_dpt / 2 + i * config_input.d_mix_dpt;
     }
