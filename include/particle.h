@@ -25,12 +25,27 @@ typedef struct ParticleData {
                std::abs(py - other.py) > tolerance ||
                std::abs(pz - other.pz) > tolerance;
     }
+    void update_position(double t_max) {
+        x += (t_max - freeze_out_time) * px / p0;
+        y += (t_max - freeze_out_time) * py / p0;
+        z += (t_max - freeze_out_time) * pz / p0;
+    }
 } ParticleData;
 
 typedef struct DeutronData {
     double t, x, y, z;
     double p0, px, py, pz;
     double probability;
+    void calculate_deutron_data(const ParticleData &proton, const ParticleData &neutron) {
+        t  = std::max(proton.freeze_out_time, neutron.freeze_out_time);
+        x  = (proton.x + neutron.x) / 2.0;
+        y  = (proton.y + neutron.y) / 2.0;
+        z  = (proton.z + neutron.z) / 2.0;
+        p0 = proton.p0 + neutron.p0;
+        px = proton.px + neutron.px;
+        py = proton.py + neutron.py;
+        pz = proton.pz + neutron.pz;
+    }
 } DeutronData;
 
 typedef struct EventData {

@@ -5,6 +5,7 @@
 #include "../include/read_particle_data.h"
 #include <cmath>
 #include <iostream>
+#include <ranges>
 #include <sstream>
 
 void ReadLine(const std::string &line, EventData &currentEvent) {
@@ -96,3 +97,64 @@ void read_batch_size(const std::string &filename, int batchSize, BatchMap &batch
         batches[currentBatch].eventCount = eventCount;
     }
 }
+void calculate_freeze_position(ParticleData &p) {
+    const double vx = p.px / p.p0;
+    const double vy = p.py / p.p0;
+    const double vz = p.pz / p.p0;
+    const double dt = p.t - p.freeze_out_time;
+    const double dx = vx * dt;
+    const double dy = vy * dt;
+    const double dz = vz * dt;
+    p.x -= dx;
+    p.y -= dy;
+    p.z -= dz;
+}
+void extractParticlesFromEvents(std::map<int, EventData> &all_Events,
+                                const std::string &protonFileName,
+                                const std::string &neutronFileName) {
+    std::ofstream protonFile(protonFileName, std::ios::out);
+    std::ofstream neutronFile(neutronFileName, std::ios::out);
+    for (auto &[eventID, particlesByType]: all_Events | std::views::values) {
+        protonFile << "t x y z px py pz p0 mass t_out\n";
+        neutronFile << "t x y z px py pz p0 mass t_out\n";
+        for (auto &[pdgCode, particles]: particlesByType) {
+            if (pdgCode == 2212 || pdgCode == 2112) {
+                for (auto &particle: particles) {
+                    calculate_freeze_position(particle);
+                    std::ofstream &outputFile =
+                            (pdgCode == 2212) ? protonFile : neutronFile;
+                    outputFile << std::fixed << std::setprecision(7)
+                               << particle.t << " " << particle.x
+                               << " " << particle.y << " " << particle.z << " "
+                               << particle.px << " " << particle.py << " "
+                               << particle.pz << " " << particle.p0 << " "
+                               << particle.mass << " " << particle.freeze_out_time << "\n";
+                }
+            }
+        }
+    }
+    protonFile.close();
+    neutronFile.close();
+}
+//void extractParticlesFromEvents(std::map<int, EventData> &all_Events,
+//                                const std::string &protonFileName,
+//                                const std::string &neutronFileName) {
+//    std::vector<ParticleData> protons;
+//    std::vector<ParticleData> neutrons;
+//    for (auto &[eventID, particlesByType]: all_Events | std::views::values) {
+//        for (auto &[pdgCode, particles]: particlesByType) {
+//            if (pdgCode == 2212 || pdgCode == 2112) {
+//                for (auto &particle: particles) {
+//                    calculate_freeze_position(particle);
+//                    if (pdgCode == 2212) {
+//                        protons.push_back(particle);
+//                    } else {
+//                        neutrons.push_back(particle);
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    output_nuclei(protons, protonFileName);
+//    output_nuclei(neutrons, neutronFileName);
+//}

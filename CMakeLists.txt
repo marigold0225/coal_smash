@@ -12,4 +12,6 @@ add_executable(coal_smash
         src/read_particle_data.cpp
         src/coal_deutron.cpp
         include/coal_deutron.h
-        src/main.cpp)
+        src/main.cpp
+        include/output_file.h
+        src/output_file.cpp)
