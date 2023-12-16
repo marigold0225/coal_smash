@@ -59,15 +59,29 @@ bool ParticleData::operator!=(const ParticleData &other) const {
            std::abs(pz - other.pz) > tolerance;
 }
 void ParticleData::calculate_deutron_data(const ParticleData &proton, const ParticleData &neutron) {
-    t      = std::max(proton.freeze_out_time, neutron.freeze_out_time);
-    x      = (proton.x + neutron.x) / 2.0;
-    y      = (proton.y + neutron.y) / 2.0;
-    z      = (proton.z + neutron.z) / 2.0;
-    p0     = proton.p0 + neutron.p0;
-    px     = proton.px + neutron.px;
-    py     = proton.py + neutron.py;
-    pz     = proton.pz + neutron.pz;
-    mass   = std::sqrt(p0 * p0 - px * px - py * py - pz * pz);
-    charge = proton.charge + neutron.charge;
-    pdg    = 1000010020;
+    freeze_out_time = std::max(proton.freeze_out_time, neutron.freeze_out_time);
+    x               = (proton.x + neutron.x) / 2.0;
+    y               = (proton.y + neutron.y) / 2.0;
+    z               = (proton.z + neutron.z) / 2.0;
+    p0              = proton.p0 + neutron.p0;
+    px              = proton.px + neutron.px;
+    py              = proton.py + neutron.py;
+    pz              = proton.pz + neutron.pz;
+    mass            = std::sqrt(p0 * p0 - px * px - py * py - pz * pz);
+    charge          = proton.charge + neutron.charge;
+    pdg             = 1000010020;
+}
+void ParticleData::calculate_fourbody_data(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1, const ParticleData &n2) {
+    freeze_out_time = std::max(std::max(p1.freeze_out_time, p2.freeze_out_time),
+                               std::max(n1.freeze_out_time, n2.freeze_out_time));
+    x               = (p1.x + p2.x + n1.x + n2.x) / 4.0;
+    y               = (p1.y + p2.y + n1.y + n2.y) / 4.0;
+    z               = (p1.z + p2.z + n1.z + n2.z) / 4.0;
+    p0              = p1.p0 + p2.p0 + n1.p0 + n2.p0;
+    px              = p1.px + p2.px + n1.px + n2.px;
+    py              = p1.py + p2.py + n1.py + n2.py;
+    pz              = p1.pz + p2.pz + n1.pz + n2.pz;
+    mass            = std::sqrt(p0 * p0 - px * px - py * py - pz * pz);
+    charge          = p1.charge + p2.charge + n1.charge + n2.charge;
+    pdg             = 1000020030;
 }

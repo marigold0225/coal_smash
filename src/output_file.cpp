@@ -14,18 +14,18 @@
 //    output_file.close();
 //}
 
-void output_deutrons(const std::vector<ParticleData> &deutrons, const std::string &filename) {
-    std::ofstream output_file(filename, std::ios::out);
-    if (output_file.is_open()) {
-        output_file << "t x y z px py pz p0 probability\n";
-        for (const auto &deuteron: deutrons) {
-            output_file << deuteron.t << " " << deuteron.x << " " << deuteron.y << " " << deuteron.z << " "
-                        << deuteron.px << " " << deuteron.py << " " << deuteron.pz << " " << deuteron.p0 << " "
-                        << deuteron.probability << "\n";
-        }
+void output_deutrons(const std::vector<ParticleData> &deutrons, std::ofstream &output) {
+    output << "t x y z px py pz p0 mass probability\n";
+    for (const auto &deutron: deutrons) {
+        output << std::fixed << std::setprecision(15)
+               << deutron.freeze_out_time << " " << deutron.x << " "
+               << deutron.y << " " << deutron.z << " "
+               << deutron.px << " " << deutron.py << " "
+               << deutron.pz << " " << deutron.p0 << " "
+               << deutron.mass << " " << deutron.probability << "\n";
     }
-    output_file.close();
 }
+
 
 void output_d_mix_spv(const std::vector<double> &d_mix_spv,
                       const std::vector<double> &d_mix_ptv,

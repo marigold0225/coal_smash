@@ -6,16 +6,23 @@
 typedef struct config_input {
     std::string calculation_mode;
     int mix_events;
-    double rap_cut_nucl;
-    double rap_cut_coal;
+    //select particles
+    bool set_on;
+    int proton_limit;
+    int neutron_limit;
+    //constant
     double cut_dr;
     double cut_dp;
     double d_mix_dpt;
+    //deutron
+    double rap_cut_nucl;
+    double rap_cut_coal;
     double rms;
+    //alpha
     // reaction rates
     bool rac_deuteron;
     bool rac_tritium;
-    bool rac_helium;
+    bool rac_helium4;
 } config_in;
 void initialize_config_from_parser(config_in &config,
                                    const config_parser &read_config_parser);

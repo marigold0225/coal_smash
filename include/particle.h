@@ -24,6 +24,10 @@ typedef struct ParticleData {
 
     void calculate_deutron_data(const ParticleData &proton, const ParticleData &neutron);
 
+    void calculate_fourbody_data(const ParticleData &p1, const ParticleData &p2,
+                                 const ParticleData &n1, const ParticleData &n2);
+
+
 } ParticleData;
 
 typedef struct EventData {

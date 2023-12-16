@@ -3,13 +3,45 @@
 //
 #include "../include/coal_deutron.h"
 #include <algorithm>
-#include <functional>
+#include <filesystem>
 #include <iomanip>
 #include <queue>
 #include <random>
 
-void update_d_mix_spv(const double pt, const double probability, const config_in &config_input,
-                      std::vector<double> &d_mix_spv) {
+double calculate_fraction_batch_factor(
+        const std::vector<ParticleData> &protons,
+        const std::vector<ParticleData> &neutrons,
+        std::vector<ParticleData> &protons_fraction,
+        std::vector<ParticleData> &neutrons_fraction,
+        const config_in &config_input) {
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    protons_fraction = protons;
+    std::shuffle(protons_fraction.begin(), protons_fraction.end(), g);
+    if (protons_fraction.size() > static_cast<size_t>(config_input.proton_limit)) {
+        protons_fraction.resize(config_input.proton_limit);
+    }
+
+    neutrons_fraction = neutrons;
+    std::shuffle(neutrons_fraction.begin(), neutrons_fraction.end(), g);
+    if (neutrons_fraction.size() > static_cast<size_t>(config_input.neutron_limit)) {
+        neutrons_fraction.resize(config_input.neutron_limit);
+    }
+
+    auto kp    = static_cast<double>(protons.size());
+    auto kn    = static_cast<double>(neutrons.size());
+    auto kpmix = static_cast<double>(protons_fraction.size());
+    auto knmix = static_cast<double>(neutrons_fraction.size());
+
+    //    double sfactor = (kp * kp / (kpmix * (kpmix - 1)) * 2.0) *
+    //                     (kn * kn / (knmix * (knmix - 1)) * 2.0);
+    double sfactor = (kp * kn) / (kpmix * knmix);
+
+    return sfactor;
+}
+void update_momentum_array(double pt, double probability, const config_in &config_input,
+                           std::vector<double> &d_mix_spv) {
     int npt = static_cast<int>(pt / config_input.d_mix_dpt);
     if (npt <= d_mix_spv.size()) {
         d_mix_spv[npt] += probability;
@@ -89,81 +121,173 @@ ParticleData calculate_info_deutron(const ParticleData &p1, const ParticleData &
     deutron_data.probability = calculate_pro_deutron(diff_r, diff_p, config_input.rms);
 
     deutron_data.calculate_deutron_data(boosted_proton, boosted_neutron);
-    //ParticleData boosted_deutron = deutron_data.lorentz_boost(-beta_x, -beta_y, -beta_z);
-    const double pt = sqrt(px_total * px_total + py_total * py_total);
-    update_d_mix_spv(pt, deutron_data.probability, config_input, d_mix_spv);
-    return deutron_data;
+    ParticleData boosted_deutron = deutron_data.lorentz_boost(-beta_x, -beta_y, -beta_z);
+    const double pt              = sqrt(px_total * px_total + py_total * py_total);
+    update_momentum_array(pt, deutron_data.probability, config_input, d_mix_spv);
+    return boosted_deutron;
 }
-void calculate_one_batch(const std::vector<ParticleData> &protons,
-                         const std::vector<ParticleData> &neutrons,
-                         const config_in &config_input, std::vector<double> &d_mix_spv,
-                         const std::vector<double> &d_mix_ptv, double &batch_deutrons,
-                         int eventsInBatch, std::vector<ParticleData> &deutrons) {
+
+//void calculate_deutron_batch(const std::vector<ParticleData> &protons,
+//                             const std::vector<ParticleData> &neutrons,
+//                             const config_in &config_input, std::vector<double> &d_mix_spv,
+//                             const std::vector<double> &d_mix_ptv, double &batch_deutrons,
+//                             int eventsInBatch, std::vector<ParticleData> &deutrons) {
+//    deutrons.clear();
+//    batch_deutrons      = 0.0;
+//    const int mixEvents = eventsInBatch * eventsInBatch;
+//
+//    auto compare = [](const ParticleData &a, const ParticleData &b) {
+//        return a.probability < b.probability;
+//    };
+//    std::priority_queue<ParticleData, std::vector<ParticleData>, decltype(compare)> deuteron_queue(
+//            compare);
+//
+//    std::random_device rd;
+//    std::mt19937 gen(rd());
+//    std::uniform_real_distribution<> dis(0.0, 1.0);
+//
+//    if (config_input.set_on) {
+//
+//        std::vector<ParticleData> protons_fraction, neutrons_fraction;
+//        double factor = calculate_fraction_batch_factor(protons, neutrons, protons_fraction, neutrons_fraction, config_input);
+//        std::cout << "Factor: " << factor << "proton size" << protons_fraction.size() << std::endl;
+//        for (const auto &proton: protons_fraction) {
+//            for (const auto &neutron: neutrons_fraction) {
+//                ParticleData deutron = calculate_info_deutron(proton, neutron, config_input, d_mix_spv);
+//                batch_deutrons += deutron.probability * factor;
+//                if (deutron.probability > 0) {
+//                    deuteron_queue.push(deutron);
+//                }
+//            }
+//        }
+//
+//        for (int k = 0; k < d_mix_spv.size(); ++k) {
+//            if (d_mix_ptv[k] > 0) {
+//                d_mix_spv[k] = d_mix_spv[k] / (2 * M_PI * d_mix_ptv[k] * config_input.d_mix_dpt * mixEvents) * factor;
+//            }
+//        }
+//    } else {
+//        for (const auto &proton: protons) {
+//            for (const auto &neutron: neutrons) {
+//                ParticleData deutron = calculate_info_deutron(proton, neutron, config_input, d_mix_spv);
+//                batch_deutrons += deutron.probability;
+//                if (deutron.probability > 0) {
+//                    deuteron_queue.push(deutron);
+//                }
+//            }
+//        }
+//
+//        for (int k = 0; k < d_mix_spv.size(); ++k) {
+//            if (d_mix_ptv[k] > 0) {
+//                d_mix_spv[k] = d_mix_spv[k] / (2 * M_PI * d_mix_ptv[k] * config_input.d_mix_dpt * mixEvents);
+//            }
+//        }
+//    }
+//
+//    int expected_deutrons = static_cast<int>(batch_deutrons);
+//    double fraction       = batch_deutrons - expected_deutrons;
+//    if (dis(gen) < fraction) {
+//        expected_deutrons++;
+//    }
+//    while (!deuteron_queue.empty() && expected_deutrons > 0) {
+//        deutrons.push_back(deuteron_queue.top());
+//        deuteron_queue.pop();
+//        expected_deutrons--;
+//    }
+//}
+
+void calculate_deutron_batch(const std::vector<ParticleData> &protons,
+                             const std::vector<ParticleData> &neutrons,
+                             const config_in &config_input, std::vector<double> &d_mix_spv,
+                             const std::vector<double> &d_mix_ptv, double &batch_deutrons,
+                             int eventsInBatch, std::vector<ParticleData> &deutrons) {
     batch_deutrons      = 0.0;
     const int mixEvents = eventsInBatch * eventsInBatch;
-    auto compare        = [](const ParticleData &a, const ParticleData &b) {
-        return a.probability < b.probability;
-    };
-    std::priority_queue<ParticleData, std::vector<ParticleData>, decltype(compare)> deuteron_queue(
-            compare);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0.0, 1.0);
+    std::vector<std::pair<ParticleData, double>> potential_deutrons;
+    std::vector<double> cumulative_probabilities;
+
     for (const auto &proton: protons) {
         for (const auto &neutron: neutrons) {
             ParticleData deutron = calculate_info_deutron(proton, neutron, config_input, d_mix_spv);
-            batch_deutrons += deutron.probability;
             if (deutron.probability > 0) {
-                deuteron_queue.push(deutron);
+                potential_deutrons.emplace_back(deutron, deutron.probability);
+                batch_deutrons += deutron.probability;
+                cumulative_probabilities.push_back(batch_deutrons);
             }
         }
     }
+
     int expected_deutrons = static_cast<int>(batch_deutrons);
     double fraction       = batch_deutrons - expected_deutrons;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0.0, 1.0);
     if (dis(gen) < fraction) {
         expected_deutrons++;
     }
-    while (!deuteron_queue.empty() && expected_deutrons > 0) {
-        deutrons.push_back(deuteron_queue.top());
-        deuteron_queue.pop();
+
+    while (expected_deutrons > 0 && !cumulative_probabilities.empty()) {
+        double random_number = dis(gen) * batch_deutrons;
+        auto it              = std::lower_bound(cumulative_probabilities.begin(),
+                                                cumulative_probabilities.end(), random_number);
+
+        if (it != cumulative_probabilities.end()) {
+            size_t index = std::distance(cumulative_probabilities.begin(), it);
+            deutrons.push_back(potential_deutrons[index].first);
+            cumulative_probabilities.erase(it);
+            potential_deutrons.erase(potential_deutrons.begin() + static_cast<std::ptrdiff_t>(index));
+        }
         expected_deutrons--;
     }
-    for (int k = 0; k < d_mix_spv.size(); ++k) {
+
+    for (int k = 0; k < 100; ++k) {
         if (d_mix_ptv[k] > 0) {
             d_mix_spv[k] /= (2 * M_PI * d_mix_ptv[k] * config_input.d_mix_dpt * mixEvents);
         }
     }
 }
-void calculate_deuteron(const std::string &protonFile,
-                        const std::string &neutronFile,
-                        const config_in &configInput,
-                        int batchSize, std::vector<double> &dMixSpv,
-                        const std::vector<double> &dMixPtv,
+
+void calculate_deuteron(const std::string &protonFile, const std::string &neutronFile,
+                        const std::string &deutronFile,
+                        const config_in &configInput, int batchSize,
+                        std::vector<double> &dMixSpv, const std::vector<double> &dMixPtv,
                         std::vector<ParticleData> &deutrons) {
     BatchMap protonBatches, neutronBatches;
     double total_deutrons = 0.0;
     int total_batches     = 0;
-    read_batch_size(protonFile, batchSize, protonBatches);
-    read_batch_size(neutronFile, batchSize, neutronBatches);
-    for (const auto &[batchNumber, batchData]: protonBatches) {
-        const auto &protons     = batchData.particles;
-        const auto &neutrons    = neutronBatches[batchNumber].particles;
-        double batch_deutrons   = 0.0;
-        const int eventsInBatch = batchData.eventCount;
-        calculate_one_batch(protons,
-                            neutrons,
-                            configInput,
-                            dMixSpv,
-                            dMixPtv,
-                            batch_deutrons,
-                            eventsInBatch, deutrons);
-        total_deutrons += batch_deutrons / eventsInBatch / eventsInBatch;
-        total_batches++;
-        std::cout << "Average number of deuteron per batch: " << batch_deutrons / eventsInBatch / eventsInBatch << std::endl;
+    read_batch_nuclei(protonFile, batchSize, protonBatches);
+    read_batch_nuclei(neutronFile, batchSize, neutronBatches);
+
+    std::ofstream output;
+    if (!std::filesystem::exists(deutronFile)) {
+        output.open(deutronFile, std::ios::out);
+    } else {
+        output.open(deutronFile, std::ios::app);
     }
+
+    for (const auto &[batchNumber, batchData]: protonBatches) {
+        const auto &protons       = batchData.particles;
+        const auto &neutrons      = neutronBatches[batchNumber].particles;
+        double num_batch_deutrons = 0.0;
+        const int eventsInBatch   = batchData.eventCount;
+        std::vector<ParticleData> batchDeutrons;
+        calculate_deutron_batch(protons,
+                                neutrons,
+                                configInput,
+                                dMixSpv,
+                                dMixPtv,
+                                num_batch_deutrons,
+                                eventsInBatch, batchDeutrons);
+        total_deutrons += num_batch_deutrons / eventsInBatch / eventsInBatch;
+        total_batches++;
+        deutrons.insert(deutrons.end(), batchDeutrons.begin(), batchDeutrons.end());
+        if (output.is_open()) {
+            output_deutrons(batchDeutrons, output);
+        }
+        std::cout << "Average number of deuteron per batch: " << num_batch_deutrons / eventsInBatch / eventsInBatch << std::endl;
+    }
+    output.close();
     const double average_deutrons = total_batches > 0 ? total_deutrons / total_batches : 0.0;
     std::cout << "Average number of deuteron per event: " << average_deutrons << std::endl;
-
-    output_deutrons(deutrons, "data/deuteron.dat");
     output_d_mix_spv(dMixSpv, dMixPtv, "tem/d_mix_spv.dat", total_batches);
 }

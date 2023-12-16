@@ -8,7 +8,7 @@
 #include <iostream>
 #include <istream>
 
-void output_deutrons(const std::vector<ParticleData> &deutrons, const std::string &filename);
+void output_deutrons(const std::vector<ParticleData> &deutrons, std::ofstream &output);
 
 
 //void output_nuclei(const std::vector<ParticleData> &nuclei, const std::string &filename);

@@ -61,7 +61,7 @@ void readFile_smash(const std::string &filename, std::map<int, EventData> &all_E
     }
 }
 
-void read_batch_size(const std::string &filename, int batchSize, BatchMap &batches) {
+void read_batch_nuclei(const std::string &filename, int batchSize, BatchMap &batches) {
     std::ifstream file(filename);
     std::string line;
     ParticleData particle{};
@@ -136,25 +136,33 @@ void extractParticlesFromEvents(std::map<int, EventData> &all_Events,
     protonFile.close();
     neutronFile.close();
 }
-//void extractParticlesFromEvents(std::map<int, EventData> &all_Events,
-//                                const std::string &protonFileName,
-//                                const std::string &neutronFileName) {
-//    std::vector<ParticleData> protons;
-//    std::vector<ParticleData> neutrons;
-//    for (auto &[eventID, particlesByType]: all_Events | std::views::values) {
-//        for (auto &[pdgCode, particles]: particlesByType) {
-//            if (pdgCode == 2212 || pdgCode == 2112) {
-//                for (auto &particle: particles) {
-//                    calculate_freeze_position(particle);
-//                    if (pdgCode == 2212) {
-//                        protons.push_back(particle);
-//                    } else {
-//                        neutrons.push_back(particle);
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    output_nuclei(protons, protonFileName);
-//    output_nuclei(neutrons, neutronFileName);
-//}
+void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &batches) {
+    std::ifstream file(filename);
+    std::string line;
+    ParticleData particle;
+    int currentBatchNumber = 0;
+    BatchData currentBatch;
+
+    while (std::getline(file, line)) {
+        if (line.find("t x y z px py pz p0 mass probability") != std::string::npos) {
+            if (!currentBatch.particles.empty()) {
+                currentBatch.eventCount = currentBatchNumber;
+                batches.push_back(currentBatch);
+                currentBatch.particles.clear();
+                currentBatchNumber++;
+            }
+            continue;
+        }
+
+        if (std::istringstream iss(line); iss >> particle.freeze_out_time >> particle.x >>
+                                          particle.y >> particle.z >> particle.px >>
+                                          particle.py >> particle.pz >> particle.p0 >>
+                                          particle.mass >> particle.probability) {
+            currentBatch.particles.push_back(particle);
+        }
+    }
+    if (!currentBatch.particles.empty()) {
+        currentBatch.eventCount = currentBatchNumber;
+        batches.push_back(currentBatch);
+    }
+}

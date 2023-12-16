@@ -15,4 +15,6 @@ add_executable(coal_smash
         src/main.cpp
         include/output_file.h
         src/output_file.cpp
-        src/particle.cpp)
+        src/particle.cpp
+        include/coal_alpha.h
+        src/coal_alpha.cpp)

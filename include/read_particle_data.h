@@ -21,8 +21,10 @@ void calculate_freeze_position(ParticleData &p);
 
 void readFile_smash(const std::string &filename, std::map<int, EventData> &all_Events);
 
-void read_batch_size(const std::string &filename, int batchSize,
-                     BatchMap &batches);
+void read_batch_nuclei(const std::string &filename, int batchSize,
+                       BatchMap &batches);
+
+void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &batche_deutron);
 
 void extractParticlesFromEvents(std::map<int, EventData> &all_Events,
                                 const std::string &protonFileName,

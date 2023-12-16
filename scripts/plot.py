@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = np.loadtxt('../tem/d_mix_spv.dat')
+data = np.loadtxt('../tem/alpha_mix_spv.dat')
 
 x = data[:, 0]
 y = data[:, 1]
