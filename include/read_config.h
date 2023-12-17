@@ -19,6 +19,7 @@ typedef struct config_input {
     double rap_cut_coal;
     double rms;
     //alpha
+    double alpha_rms;
     // reaction rates
     bool rac_deuteron;
     bool rac_tritium;

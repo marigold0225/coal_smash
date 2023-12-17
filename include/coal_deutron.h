@@ -32,3 +32,8 @@ double calculate_fraction_batch_factor(const std::vector<ParticleData> &protons,
                                        std::vector<ParticleData> &protons_fraction,
                                        std::vector<ParticleData> &neutrons_fraction,
                                        const config_in &config_input);
+
+void weighted_sampling(std::vector<ParticleData> &sample_particles,
+                       std::vector<std::pair<ParticleData, double>> &potential_particles,
+                       std::vector<double> &cumulative_probabilities,
+                       double number_of_particles);

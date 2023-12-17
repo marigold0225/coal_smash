@@ -12,7 +12,8 @@ int main() {
     const std::string protonFileName   = "data/proton.dat";
     const std::string neutronFileName  = "data/neutron.dat";
     const std::string deuteronFileName = "data/deuteron.dat";
-    const std::string alphaFileName    = "data/alpha.dat";
+    const std::string alphaFileName    = "data/alpha_two.dat";
+    const std::string alphaFileName4   = "data/alpha_four.dat";
 
     const config_parser config(config_file_name);
     config_in config_input;
@@ -34,13 +35,15 @@ int main() {
         std::cout << "Using existing 'proton.dat' and 'neutron.dat' for calculations."
                   << std::endl;
     }
+
+    int steps = 100;
     //Deutron calculations
     if (config_input.rac_deuteron) {
-        std::vector<double> deutron_mix_spv(100, 0.0);
-        std::vector<double> deutron_mix_ptv(100);
+        std::vector<double> deutron_mix_spv(steps, 0.0);
+        std::vector<double> deutron_mix_ptv(steps);
         std::vector<ParticleData> deutrons;
-        for (int i = 0; i < 100; ++i) {
-            deutron_mix_ptv[i] = config_input.d_mix_dpt / 2 + i * config_input.d_mix_dpt;
+        for (int i = 0; i < steps; ++i) {
+            deutron_mix_ptv[i] = config_input.d_mix_dpt / 2 + static_cast<double>(i) * config_input.d_mix_dpt;
         }
         calculate_deuteron(protonFileName, neutronFileName, deuteronFileName,
                            config_input, batchSize,
@@ -48,13 +51,13 @@ int main() {
     }
     //alpha calculations
     if (config_input.rac_helium4) {
-        std::vector<double> alpha_mix_spv(100, 0.0);
-        std::vector<double> alpha_mix_ptv(100);
+        std::vector<double> alpha_mix_spv(steps, 0.0);
+        std::vector<double> alpha_mix_ptv(steps);
         std::vector<ParticleData> alpha;
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < steps; ++i) {
             alpha_mix_ptv[i] = config_input.d_mix_dpt / 2 + i * config_input.d_mix_dpt;
         }
-        //        calculate_alpha_fourbody(protonFileName, neutronFileName, alphaFileName,
+        //        calculate_alpha_fourbody(protonFileName, neutronFileName, alphaFileName4,
         //                                 config_input, batchSize,
         //                                 alpha_mix_spv, alpha_mix_ptv, alpha);
         calculate_alpha_twobody(deuteronFileName, alphaFileName,
