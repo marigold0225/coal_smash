@@ -13,12 +13,15 @@ typedef struct config_input {
     //constant
     double cut_dr;
     double cut_dp;
-    double d_mix_dpt;
     //deutron
-    double rap_cut_nucl;
-    double rap_cut_coal;
+    double d_mix_dpt;
+    double d_rap_cut_nucl;
+    double d_rap_cut_coal;
     double rms;
     //alpha
+    double alpha_mix_dpt;
+    double alpha_rap_cut_nucl;
+    double alpha_rap_cut_coal;
     double alpha_rms;
     // reaction rates
     bool rac_deuteron;

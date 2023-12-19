@@ -22,10 +22,18 @@ typedef struct ParticleData {
 
     [[nodiscard]] ParticleData lorentz_boost(double beta_x, double beta_y, double beta_z) const;
 
-    void calculate_deutron_data(const ParticleData &proton, const ParticleData &neutron);
+    [[nodiscard]] double get_rapidity() const;
 
-    void calculate_fourbody_data(const ParticleData &p1, const ParticleData &p2,
-                                 const ParticleData &n1, const ParticleData &n2);
+    //Calculating Transverse Momentum
+    //    [[nodiscard]] double get_pt() const;
+
+    //get freeze out position
+    void get_freeze_out_position();
+
+    void get_twobody_data(const ParticleData &proton, const ParticleData &neutron);
+
+    void get_fourbody_data(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
+                           const ParticleData &n2);
 
 
 } ParticleData;
@@ -33,4 +41,5 @@ typedef struct ParticleData {
 typedef struct EventData {
     int eventID;
     std::map<int, std::vector<ParticleData>> particlesByType;
+    [[nodiscard]] int countChargeParticles() const;
 } EventData;

@@ -14,28 +14,25 @@
 //    output_file.close();
 //}
 
-void output_deutrons(const std::vector<ParticleData> &deutrons, std::ofstream &output) {
+void output_cluster(const std::vector<ParticleData> &clusters, std::ofstream &output) {
     output << "t x y z px py pz p0 mass probability\n";
-    for (const auto &deutron: deutrons) {
-        output << std::fixed << std::setprecision(15)
-               << deutron.freeze_out_time << " " << deutron.x << " "
-               << deutron.y << " " << deutron.z << " "
-               << deutron.px << " " << deutron.py << " "
-               << deutron.pz << " " << deutron.p0 << " "
-               << deutron.mass << " " << deutron.probability << "\n";
+    for (const auto &cluster: clusters) {
+        output << std::fixed << std::setprecision(15) << cluster.freeze_out_time << " " << cluster.x
+               << " " << cluster.y << " " << cluster.z << " " << cluster.px << " " << cluster.py
+               << " " << cluster.pz << " " << cluster.p0 << " " << cluster.mass << " "
+               << cluster.probability << "\n";
     }
 }
 
 
-void output_d_mix_spv(const std::vector<double> &d_mix_spv,
-                      const std::vector<double> &d_mix_ptv,
-                      const std::string &filename,
-                      int total_batch) {
+void output_spv(std::vector<double> &d_mix_spv, const std::vector<double> &d_mix_ptv,
+                const std::string &filename, int total_batch) {
     std::ofstream output_file(filename, std::ios::out);
     if (output_file.is_open()) {
-        for (int i = 0; i < d_mix_spv.size(); i++) {
-            double spv = d_mix_spv[i] / total_batch;
-            output_file << std::setw(15) << d_mix_ptv[i] << std::setw(15) << spv << std::endl;
+        for (int i = 0; i < d_mix_spv.size(); ++i) {
+            d_mix_spv[i] /= total_batch;
+            output_file << std::setw(15) << d_mix_ptv[i] << std::setw(15) << d_mix_spv[i]
+                        << std::endl;
         }
     }
     output_file.close();

@@ -9,7 +9,8 @@ void ParticleData::update_position(double t_max) {
     z += (t_max - freeze_out_time) * pz / p0;
 }
 
-ParticleData ParticleData::lorentz_boost(const double beta_x, const double beta_y, const double beta_z) const {
+ParticleData ParticleData::lorentz_boost(const double beta_x, const double beta_y,
+                                         const double beta_z) const {
     ParticleData boost_p = *this;
     if (const double beta2 = beta_x * beta_x + beta_y * beta_y + beta_z * beta_z; beta2 > 1.0e-5) {
         const double gamma   = 1.0 / sqrt(1.0 - beta2);
@@ -23,18 +24,14 @@ ParticleData ParticleData::lorentz_boost(const double beta_x, const double beta_
         const double x_lam12 = (gamma - 1.0) * beta_x * beta_y / beta2;
         const double x_lam13 = (gamma - 1.0) * beta_x * beta_z / beta2;
         const double x_lam23 = (gamma - 1.0) * beta_y * beta_z / beta2;
-        const double new_t =
-                freeze_out_time * x_lam00 + x * x_lam01 + y * x_lam02 + z * x_lam03;
-        const double new_x =
-                freeze_out_time * x_lam01 + x * x_lam11 + y * x_lam12 + z * x_lam13;
-        const double new_y =
-                freeze_out_time * x_lam02 + x * x_lam12 + y * x_lam22 + z * x_lam23;
-        const double new_z =
-                freeze_out_time * x_lam03 + x * x_lam13 + y * x_lam23 + z * x_lam33;
-        const double new_p0     = p0 * x_lam00 + px * x_lam01 + py * x_lam02 + pz * x_lam03;
-        const double new_px     = p0 * x_lam01 + px * x_lam11 + py * x_lam12 + pz * x_lam13;
-        const double new_py     = p0 * x_lam02 + px * x_lam12 + py * x_lam22 + pz * x_lam23;
-        const double new_pz     = p0 * x_lam03 + px * x_lam13 + py * x_lam23 + pz * x_lam33;
+        const double new_t   = freeze_out_time * x_lam00 + x * x_lam01 + y * x_lam02 + z * x_lam03;
+        const double new_x   = freeze_out_time * x_lam01 + x * x_lam11 + y * x_lam12 + z * x_lam13;
+        const double new_y   = freeze_out_time * x_lam02 + x * x_lam12 + y * x_lam22 + z * x_lam23;
+        const double new_z   = freeze_out_time * x_lam03 + x * x_lam13 + y * x_lam23 + z * x_lam33;
+        const double new_p0  = p0 * x_lam00 + px * x_lam01 + py * x_lam02 + pz * x_lam03;
+        const double new_px  = p0 * x_lam01 + px * x_lam11 + py * x_lam12 + pz * x_lam13;
+        const double new_py  = p0 * x_lam02 + px * x_lam12 + py * x_lam22 + pz * x_lam23;
+        const double new_pz  = p0 * x_lam03 + px * x_lam13 + py * x_lam23 + pz * x_lam33;
         boost_p.freeze_out_time = new_t;
         boost_p.x               = new_x;
         boost_p.y               = new_y;
@@ -49,16 +46,12 @@ ParticleData ParticleData::lorentz_boost(const double beta_x, const double beta_
 
 bool ParticleData::operator!=(const ParticleData &other) const {
     constexpr double tolerance = 1e-6;
-    return std::abs(t - other.t) > tolerance ||
-           std::abs(x - other.x) > tolerance ||
-           std::abs(y - other.y) > tolerance ||
-           std::abs(z - other.z) > tolerance ||
-           std::abs(p0 - other.p0) > tolerance ||
-           std::abs(px - other.px) > tolerance ||
-           std::abs(py - other.py) > tolerance ||
-           std::abs(pz - other.pz) > tolerance;
+    return std::abs(t - other.t) > tolerance || std::abs(x - other.x) > tolerance ||
+           std::abs(y - other.y) > tolerance || std::abs(z - other.z) > tolerance ||
+           std::abs(p0 - other.p0) > tolerance || std::abs(px - other.px) > tolerance ||
+           std::abs(py - other.py) > tolerance || std::abs(pz - other.pz) > tolerance;
 }
-void ParticleData::calculate_deutron_data(const ParticleData &proton, const ParticleData &neutron) {
+void ParticleData::get_twobody_data(const ParticleData &proton, const ParticleData &neutron) {
     freeze_out_time = std::max(proton.freeze_out_time, neutron.freeze_out_time);
     x               = (proton.x + neutron.x) / 2.0;
     y               = (proton.y + neutron.y) / 2.0;
@@ -71,7 +64,8 @@ void ParticleData::calculate_deutron_data(const ParticleData &proton, const Part
     charge          = proton.charge + neutron.charge;
     pdg             = 1000010020;
 }
-void ParticleData::calculate_fourbody_data(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1, const ParticleData &n2) {
+void ParticleData::get_fourbody_data(const ParticleData &p1, const ParticleData &p2,
+                                     const ParticleData &n1, const ParticleData &n2) {
     freeze_out_time = std::max(std::max(p1.freeze_out_time, p2.freeze_out_time),
                                std::max(n1.freeze_out_time, n2.freeze_out_time));
     x               = (p1.x + p2.x + n1.x + n2.x) / 4.0;
@@ -84,4 +78,41 @@ void ParticleData::calculate_fourbody_data(const ParticleData &p1, const Particl
     mass            = std::sqrt(p0 * p0 - px * px - py * py - pz * pz);
     charge          = p1.charge + p2.charge + n1.charge + n2.charge;
     pdg             = 1000020030;
+}
+double ParticleData::get_rapidity() const {
+    if (p0 <= pz) {
+        return 0.0;
+    }
+    return 0.5 * std::log((p0 + pz) / (p0 - pz));
+}
+
+//double ParticleData::get_pt() const { return std::sqrt(px * px + py * py); }
+
+void ParticleData::get_freeze_out_position() {
+    double vx = px / p0;
+    double vy = py / p0;
+    double vz = pz / p0;
+    double dt = t - freeze_out_time;
+    double dx = vx * dt;
+    double dy = vy * dt;
+    double dz = vz * dt;
+    x -= dx;
+    y -= dy;
+    z -= dz;
+}
+
+int EventData::countChargeParticles() const {
+    int chargeParticleCount = 0;
+    for (const auto &[type, particles]: particlesByType) {
+        for (const auto &particle: particles) {
+            //            if (particle.charge != 0) {
+            //                chargeParticleCount++;
+            //            }
+
+            if (std::abs(particle.get_rapidity()) < 0.5) {
+                chargeParticleCount++;
+            }
+        }
+    }
+    return chargeParticleCount;
 }

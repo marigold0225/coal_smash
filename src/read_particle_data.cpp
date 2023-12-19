@@ -3,10 +3,25 @@
 //
 
 #include "../include/read_particle_data.h"
+#include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <ranges>
 #include <sstream>
+
+bool checkFileExists(const std::string &filename, std::vector<std::string> &labels,
+                     const std::string &fileType) {
+    for (const auto &label: labels) {
+        std::string fileName = filename;
+        fileName.append("/").append(fileType).append("_").append(label).append(".dat");
+        if (!std::filesystem::exists(fileName)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 
 void ReadLine(const std::string &line, EventData &currentEvent) {
     std::istringstream stream(line);
@@ -19,8 +34,9 @@ void ReadLine(const std::string &line, EventData &currentEvent) {
 
     stream >> particle.t >> particle.x >> particle.y >> particle.z >> particle.mass >>
             particle.p0 >> particle.px >> particle.py >> particle.pz >> particle.pdg >> id >>
-            particle.charge >> n_coll >> form_time >> xsec_fac >> proc_id_origin >> proc_type_origin >>
-            particle.freeze_out_time >> pdg_mother1 >> pdg_mother2 >> baryon_number;
+            particle.charge >> n_coll >> form_time >> xsec_fac >> proc_id_origin >>
+            proc_type_origin >> particle.freeze_out_time >> pdg_mother1 >> pdg_mother2 >>
+            baryon_number;
 
     if (!stream.fail()) {
         currentEvent.particlesByType[particle.pdg].push_back(particle);
@@ -35,20 +51,25 @@ void readFile_smash(const std::string &filename, std::map<int, EventData> &all_E
     EventData currentEvent;
     bool eventStarted = false;
     bool inEvent      = false;
+    bool eventValid   = false;
 
     while (std::getline(file, line)) {
         if (line.starts_with("# event")) {
             if (line.find("out") != std::string::npos) {
-                if (eventStarted) {
+                if (eventStarted && eventValid) {
                     all_Events[currentEvent.eventID] = currentEvent;
-                    currentEvent                     = EventData();
+                    currentEvent                     = EventData{};
                 }
                 std::istringstream stream(line);
                 std::string temp;
                 stream >> temp >> temp >> currentEvent.eventID;
                 eventStarted = true;
                 inEvent      = true;
+                eventValid   = false;
             } else if (line.find("end") != std::string::npos && inEvent) {
+                if (line.find("scattering_projectile_target yes") != std::string::npos) {
+                    eventValid = true;
+                }
                 inEvent = false;
             }
         } else if (inEvent) {
@@ -56,7 +77,7 @@ void readFile_smash(const std::string &filename, std::map<int, EventData> &all_E
         }
     }
 
-    if (eventStarted) {
+    if (eventStarted && eventValid) {
         all_Events[currentEvent.eventID] = currentEvent;
     }
 }
@@ -79,9 +100,10 @@ void read_batch_nuclei(const std::string &filename, int batchSize, BatchMap &bat
             continue;
         }
 
-        if (std::istringstream iss(line); iss >> particle.t >> particle.x >>
-                                          particle.y >> particle.z >> particle.px >> particle.py >>
-                                          particle.pz >> particle.p0 >> particle.mass >> particle.freeze_out_time) {
+        if (std::istringstream iss(line); iss >> particle.t >> particle.x >> particle.y >>
+                                          particle.z >> particle.px >> particle.py >> particle.pz >>
+                                          particle.p0 >> particle.mass >>
+                                          particle.freeze_out_time) {
 
             if (filename.find("proton") != std::string::npos) {
                 particle.pdg    = 2212;
@@ -97,19 +119,8 @@ void read_batch_nuclei(const std::string &filename, int batchSize, BatchMap &bat
         batches[currentBatch].eventCount = eventCount;
     }
 }
-void calculate_freeze_position(ParticleData &p) {
-    const double vx = p.px / p.p0;
-    const double vy = p.py / p.p0;
-    const double vz = p.pz / p.p0;
-    const double dt = p.t - p.freeze_out_time;
-    const double dx = vx * dt;
-    const double dy = vy * dt;
-    const double dz = vz * dt;
-    p.x -= dx;
-    p.y -= dy;
-    p.z -= dz;
-}
-void extractParticlesFromEvents(std::map<int, EventData> &all_Events,
+
+void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,
                                 const std::string &protonFileName,
                                 const std::string &neutronFileName) {
     std::ofstream protonFile(protonFileName, std::ios::out);
@@ -120,15 +131,14 @@ void extractParticlesFromEvents(std::map<int, EventData> &all_Events,
         for (auto &[pdgCode, particles]: particlesByType) {
             if (pdgCode == 2212 || pdgCode == 2112) {
                 for (auto &particle: particles) {
-                    calculate_freeze_position(particle);
-                    std::ofstream &outputFile =
-                            (pdgCode == 2212) ? protonFile : neutronFile;
-                    outputFile << std::fixed << std::setprecision(7)
-                               << particle.t << " " << particle.x
-                               << " " << particle.y << " " << particle.z << " "
-                               << particle.px << " " << particle.py << " "
-                               << particle.pz << " " << particle.p0 << " "
-                               << particle.mass << " " << particle.freeze_out_time << "\n";
+                    //                    calculate_freeze_position(particle);
+                    particle.get_freeze_out_position();
+                    std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
+                    outputFile << std::fixed << std::setprecision(7) << particle.t << " "
+                               << particle.x << " " << particle.y << " " << particle.z << " "
+                               << particle.px << " " << particle.py << " " << particle.pz << " "
+                               << particle.p0 << " " << particle.mass << " "
+                               << particle.freeze_out_time << "\n";
                 }
             }
         }
@@ -155,9 +165,9 @@ void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &ba
         }
 
         if (std::istringstream iss(line); iss >> particle.freeze_out_time >> particle.x >>
-                                          particle.y >> particle.z >> particle.px >>
-                                          particle.py >> particle.pz >> particle.p0 >>
-                                          particle.mass >> particle.probability) {
+                                          particle.y >> particle.z >> particle.px >> particle.py >>
+                                          particle.pz >> particle.p0 >> particle.mass >>
+                                          particle.probability) {
             currentBatch.particles.push_back(particle);
         }
     }
@@ -165,4 +175,154 @@ void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &ba
         currentBatch.eventCount = currentBatchNumber;
         batches.push_back(currentBatch);
     }
+}
+
+std::string constructFilename(const std::string &outputDir, const std::string &fileType,
+                              const std::string &label) {
+    std::string directory = outputDir + "/" + label;
+    checkAndCreateDataOutputDir(directory);
+    //    if (!std::filesystem::exists(directory)) {
+    //        std::filesystem::create_directory(directory);
+    //    }
+    return directory + "/" + fileType + "_" + label + ".dat";
+}
+
+std::map<int, int> calculateMultiplicity(const std::map<int, EventData> &all_Events) {
+    std::map<int, int> multiplicities;
+    for (const auto &[eventID, eventData]: all_Events) {
+        int multiplicity        = eventData.countChargeParticles();
+        multiplicities[eventID] = multiplicity;
+    }
+    return multiplicities;
+}
+
+double percentile(const std::vector<int> &data, double percent) {
+    if (data.empty()) {
+        return 0.0;
+    }
+    if (percent <= 0) return data.front();
+    if (percent >= 100) return data.back();
+
+    std::vector<int> sortedData = data;
+    std::sort(sortedData.begin(), sortedData.end());
+
+    double idx      = static_cast<double>((data.size() - 1)) * percent / 100.0;
+    int idx_lo      = static_cast<int>(idx);
+    int idx_hi      = idx_lo + 1;
+    double fraction = idx - idx_lo;
+
+    if (idx_hi >= sortedData.size()) {
+        return sortedData[idx_lo];
+    }
+    return sortedData[idx_lo] * (1.0 - fraction) + sortedData[idx_hi] * fraction;
+}
+
+void calculateCentralityBounds(const std::map<int, int> &multiplicities,
+                               std::map<std::string, int> &centralityBounds) {
+    std::vector<int> multiplicitiesVector;
+    for (const auto &[eventID, multiplicity]: multiplicities) {
+        multiplicitiesVector.push_back(multiplicity);
+    }
+    centralityBounds["40-80"] = static_cast<int>(percentile(multiplicitiesVector, 20));
+    centralityBounds["20-40"] = static_cast<int>(percentile(multiplicitiesVector, 60));
+    centralityBounds["10-20"] = static_cast<int>(percentile(multiplicitiesVector, 80));
+    centralityBounds["0-10"]  = static_cast<int>(percentile(multiplicitiesVector, 90));
+}
+
+void classifyAndCountEvents(const std::map<int, int> &multiplicities,
+                            const std::map<std::string, int> &centralityBounds,
+                            std::map<int, std::string> &eventCentrality,
+                            std::map<std::string, int> &centralityEventCounts) {
+    for (const auto &[eventID, multiplicity]: multiplicities) {
+        bool classified = false;
+        for (const auto &[label, bound]: centralityBounds) {
+            if (multiplicity >= bound) {
+                eventCentrality[eventID] = label;
+                centralityEventCounts[label]++;
+                classified = true;
+                break;
+            }
+        }
+        if (!classified) {
+            eventCentrality[eventID] = "unknown";
+            centralityEventCounts["unknown"]++;
+        }
+    }
+}
+
+void writeParticlesByCentrality(std::map<int, EventData> &allEvents,
+                                const std::map<int, std::string> &eventCentrality,
+                                const std::string &outputDir) {
+    // Define centrality labels
+    std::vector<std::string> centralityLabels = {"0-10", "10-20", "20-40", "40-80"};
+
+    // Create and open files for each centrality range for protons and neutrons
+    std::map<std::string, std::ofstream> protonFiles, neutronFiles;
+    for (const auto &label: centralityLabels) {
+        std::string protonFileName = outputDir;
+        protonFileName.append("/proton_").append(label).append(".dat");
+        std::string neutronFileName = outputDir;
+        neutronFileName.append("/neutron_").append(label).append(".dat");
+        protonFiles[label].open(protonFileName, std::ios::out);
+        neutronFiles[label].open(neutronFileName, std::ios::out);
+    }
+
+    // Process and write particle data
+    for (auto &[eventID, eventData]: allEvents) {
+        const std::string &centralityLabel = eventCentrality.at(eventID);
+        std::ofstream &protonFile          = protonFiles[centralityLabel];
+        std::ofstream &neutronFile         = neutronFiles[centralityLabel];
+
+        std::string header = "t x y z px py pz p0 mass t_out\n";
+        for (auto &[pdgCode, particles]: eventData.particlesByType) {
+            if (pdgCode == 2212 || pdgCode == 2112) {
+                std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
+                outputFile << header;
+                for (auto &particle: particles) {
+                    //                    calculate_freeze_position(particle);
+                    particle.get_freeze_out_position();
+                    outputFile << std::fixed << std::setprecision(7) << particle.t << " "
+                               << particle.x << " " << particle.y << " " << particle.z << " "
+                               << particle.px << " " << particle.py << " " << particle.pz << " "
+                               << particle.p0 << " " << particle.mass << " "
+                               << particle.freeze_out_time << "\n";
+                }
+            }
+        }
+    }
+
+    for (auto &[label, file]: protonFiles) {
+        file.close();
+    }
+    for (auto &[label, file]: neutronFiles) {
+        file.close();
+    }
+}
+
+void processParticleData(const std::string &particle_file, const std::string &outputDir) {
+    std::map<int, EventData> allEvents;
+    readFile_smash(particle_file, allEvents);
+
+    std::cout << "number of events: " << allEvents.size() << std::endl;
+
+    std::map<int, int> multiplicity = calculateMultiplicity(allEvents);
+
+    std::map<std::string, int> centralityBounds;
+    calculateCentralityBounds(multiplicity, centralityBounds);
+
+    std::map<int, std::string> eventCentrality;
+    std::map<std::string, int> centralityEventCounts;
+    classifyAndCountEvents(multiplicity, centralityBounds, eventCentrality, centralityEventCounts);
+    for (const auto &[label, count]: centralityEventCounts) {
+        std::cout << "Number of events in centrality range " << label << ": " << count << std::endl;
+    }
+    writeParticlesByCentrality(allEvents, eventCentrality, outputDir);
+}
+void checkAndCreateDataOutputDir(const std::string &outputDir) {
+    if (!std::filesystem::exists(outputDir)) {
+        std::filesystem::create_directory(outputDir);
+    }
+}
+bool fileExistsInCurrentDir(const std::string &filename) {
+    return std::filesystem::exists(std::filesystem::current_path() / filename);
 }

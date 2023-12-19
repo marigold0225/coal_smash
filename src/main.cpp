@@ -2,67 +2,74 @@
 // Created by mafu on 12/13/2023.
 //
 #include "../include/coal_alpha.h"
-#include "../include/coal_deutron.h"
 #include <filesystem>
+#include <stdexcept>
 
 int main() {
+    //    try {
+    //        const std::string input_config_filename   = "config.ini";
+    //        const std::string input_particle_filename = "particle_lists.oscar";
+    //        const std::string dataOutputDir           = "data";
+    //        if (!fileExistsInCurrentDir(input_config_filename) ||
+    //            !fileExistsInCurrentDir(input_particle_filename)) {
+    //            throw std::runtime_error("Required files not found in the current directory.");
+    //        }
+    //        checkAndCreateDataOutputDir(dataOutputDir);
+    //    } catch (const std::exception &e) {
+    //        std::cout << "Error" << e.what() << std::endl;
+    //        return 1;
+    //    }
+
     std::cout << "Current path is " << std::filesystem::current_path() << std::endl;
-    const std::string config_file_name = "input/config.ini";
-    const std::string particle_file    = "data/particle_lists.oscar";
-    const std::string protonFileName   = "data/proton.dat";
-    const std::string neutronFileName  = "data/neutron.dat";
-    const std::string deuteronFileName = "data/deuteron.dat";
-    const std::string alphaFileName    = "data/alpha_two.dat";
-    const std::string alphaFileName4   = "data/alpha_four.dat";
+    const std::string input_config_filename   = "input/config.ini";
+    const std::string input_particle_filename = "data/1000/particle_lists.oscar";
+    const std::string dataOutputDir           = "data/1000";
+    if (!fileExistsInCurrentDir(input_config_filename) ||
+        !fileExistsInCurrentDir(input_particle_filename)) {
+        throw std::runtime_error("Required files not found in the current directory.");
+    }
 
-    const config_parser config(config_file_name);
-    config_in config_input;
-    initialize_config_from_parser(config_input, config);
-    const int batchSize = config_input.mix_events;
+    const config_parser read_config(input_config_filename);
+    config_in config;
+    initialize_config_from_parser(config, read_config);
 
-    const bool proton_exists  = std::filesystem::exists(protonFileName);
-    const bool neutron_exists = std::filesystem::exists(neutronFileName);
-
-    if (!proton_exists || !neutron_exists) {
-        std::cout << "'proton.dat' or 'neutron.dat' not found, using "
-                     "'particle_lists.oscar' for calculations."
-                  << std::endl;
-        std::map<int, EventData> allEvents;
-        readFile_smash(particle_file, allEvents);
-        std::cout << "number of events: " << allEvents.size() << std::endl;
-        extractParticlesFromEvents(allEvents, protonFileName, neutronFileName);
+    std::vector<std::string> centralityLabels = {"0-10", "10-20", "20-40", "40-80"};
+    if (!checkFileExists(dataOutputDir, centralityLabels, "proton") ||
+        !checkFileExists(dataOutputDir, centralityLabels, "neutron")) {
+        std::cout << "Particle data being generated..." << std::endl;
+        processParticleData(input_particle_filename, dataOutputDir);
     } else {
-        std::cout << "Using existing 'proton.dat' and 'neutron.dat' for calculations."
-                  << std::endl;
+        std::cout << "Calculations using existing data" << std::endl;
+    }
+    //Deutron calculations
+    if (config.rac_deuteron) {
+        for (const auto &label: centralityLabels) {
+            std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
+            std::string neutronFileName  = constructFilename(dataOutputDir, "neutron", label);
+            std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
+            std::string ptFileName       = constructFilename(dataOutputDir, "d_mix_spv", label);
+
+            std::vector<double> deutron_pt(100, 0.0);
+            calculate_deuteron(protonFileName, neutronFileName, deuteronFileName, ptFileName,
+                               config, deutron_pt);
+        }
+    }
+    //    //alpha calculations
+    if (config.rac_helium4) {
+        for (const auto &label: centralityLabels) {
+            std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
+            std::string neutronFileName  = constructFilename(dataOutputDir, "neutron", label);
+            std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
+            std::string alphaFileName    = constructFilename(dataOutputDir, "alpha", label);
+            std::string ptFileName       = constructFilename(dataOutputDir, "alpha_pt", label);
+
+            std::vector<double> alpha_pt(100, 0.0);
+            calculate_alpha_fourbody(protonFileName, neutronFileName, alphaFileName, config,
+                                     alpha_pt);
+            //            calculate_alpha_twobody(deuteronFileName, alphaFileName, ptFileName, config,
+            //                                    alpha_pt);
+        }
     }
 
-    int steps = 100;
-    //Deutron calculations
-    if (config_input.rac_deuteron) {
-        std::vector<double> deutron_mix_spv(steps, 0.0);
-        std::vector<double> deutron_mix_ptv(steps);
-        std::vector<ParticleData> deutrons;
-        for (int i = 0; i < steps; ++i) {
-            deutron_mix_ptv[i] = config_input.d_mix_dpt / 2 + static_cast<double>(i) * config_input.d_mix_dpt;
-        }
-        calculate_deuteron(protonFileName, neutronFileName, deuteronFileName,
-                           config_input, batchSize,
-                           deutron_mix_spv, deutron_mix_ptv, deutrons);
-    }
-    //alpha calculations
-    if (config_input.rac_helium4) {
-        std::vector<double> alpha_mix_spv(steps, 0.0);
-        std::vector<double> alpha_mix_ptv(steps);
-        std::vector<ParticleData> alpha;
-        for (int i = 0; i < steps; ++i) {
-            alpha_mix_ptv[i] = config_input.d_mix_dpt / 2 + i * config_input.d_mix_dpt;
-        }
-        //        calculate_alpha_fourbody(protonFileName, neutronFileName, alphaFileName4,
-        //                                 config_input, batchSize,
-        //                                 alpha_mix_spv, alpha_mix_ptv, alpha);
-        calculate_alpha_twobody(deuteronFileName, alphaFileName,
-                                config_input, batchSize,
-                                alpha_mix_spv, alpha_mix_ptv, alpha);
-    }
     return 0;
 }
