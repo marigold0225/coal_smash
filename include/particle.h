@@ -24,19 +24,25 @@ typedef struct ParticleData {
 
     [[nodiscard]] double get_rapidity() const;
 
+    [[nodiscard]] double get_ita_rapidity() const;
+
     //Calculating Transverse Momentum
     //    [[nodiscard]] double get_pt() const;
 
     //get freeze out position
     void get_freeze_out_position();
 
-    void get_twobody_data(const ParticleData &proton, const ParticleData &neutron);
+    void get_twobody_data(const ParticleData &p1, const ParticleData &p2);
 
     void get_fourbody_data(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
                            const ParticleData &n2);
 
 
 } ParticleData;
+
+typedef struct RapidityRange {
+    double min, max;
+} RapidityRange;
 
 typedef struct EventData {
     int eventID;

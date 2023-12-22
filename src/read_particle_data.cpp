@@ -14,14 +14,19 @@ bool checkFileExists(const std::string &filename, std::vector<std::string> &labe
                      const std::string &fileType) {
     for (const auto &label: labels) {
         std::string fileName = filename;
-        fileName.append("/").append(fileType).append("_").append(label).append(".dat");
+        fileName.append("/")
+                .append(label)
+                .append("/")
+                .append(fileType)
+                .append("_")
+                .append(label)
+                .append(".dat");
         if (!std::filesystem::exists(fileName)) {
             return false;
         }
     }
     return true;
 }
-
 
 void ReadLine(const std::string &line, EventData &currentEvent) {
     std::istringstream stream(line);
@@ -131,14 +136,12 @@ void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,
         for (auto &[pdgCode, particles]: particlesByType) {
             if (pdgCode == 2212 || pdgCode == 2112) {
                 for (auto &particle: particles) {
-                    //                    calculate_freeze_position(particle);
                     particle.get_freeze_out_position();
                     std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
-                    outputFile << std::fixed << std::setprecision(7) << particle.t << " "
-                               << particle.x << " " << particle.y << " " << particle.z << " "
-                               << particle.px << " " << particle.py << " " << particle.pz << " "
-                               << particle.p0 << " " << particle.mass << " "
-                               << particle.freeze_out_time << "\n";
+                    outputFile << std::fixed << particle.t << " " << particle.x << " " << particle.y
+                               << " " << particle.z << " " << particle.px << " " << particle.py
+                               << " " << particle.pz << " " << particle.p0 << " " << particle.mass
+                               << " " << particle.freeze_out_time << "\n";
                 }
             }
         }
@@ -179,12 +182,7 @@ void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &ba
 
 std::string constructFilename(const std::string &outputDir, const std::string &fileType,
                               const std::string &label) {
-    std::string directory = outputDir + "/" + label;
-    checkAndCreateDataOutputDir(directory);
-    //    if (!std::filesystem::exists(directory)) {
-    //        std::filesystem::create_directory(directory);
-    //    }
-    return directory + "/" + fileType + "_" + label + ".dat";
+    return outputDir + "/" + label + "/" + fileType + "_" + label + ".dat";
 }
 
 std::map<int, int> calculateMultiplicity(const std::map<int, EventData> &all_Events) {
@@ -255,18 +253,15 @@ void writeParticlesByCentrality(std::map<int, EventData> &allEvents,
                                 const std::string &outputDir) {
     // Define centrality labels
     std::vector<std::string> centralityLabels = {"0-10", "10-20", "20-40", "40-80"};
-
-    // Create and open files for each centrality range for protons and neutrons
     std::map<std::string, std::ofstream> protonFiles, neutronFiles;
     for (const auto &label: centralityLabels) {
         std::string protonFileName = outputDir;
-        protonFileName.append("/proton_").append(label).append(".dat");
+        protonFileName.append("/").append(label).append("/proton_").append(label).append(".dat");
         std::string neutronFileName = outputDir;
-        neutronFileName.append("/neutron_").append(label).append(".dat");
+        neutronFileName.append("/").append(label).append("/neutron_").append(label).append(".dat");
         protonFiles[label].open(protonFileName, std::ios::out);
         neutronFiles[label].open(neutronFileName, std::ios::out);
     }
-
     // Process and write particle data
     for (auto &[eventID, eventData]: allEvents) {
         const std::string &centralityLabel = eventCentrality.at(eventID);
@@ -279,24 +274,17 @@ void writeParticlesByCentrality(std::map<int, EventData> &allEvents,
                 std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
                 outputFile << header;
                 for (auto &particle: particles) {
-                    //                    calculate_freeze_position(particle);
                     particle.get_freeze_out_position();
-                    outputFile << std::fixed << std::setprecision(7) << particle.t << " "
-                               << particle.x << " " << particle.y << " " << particle.z << " "
-                               << particle.px << " " << particle.py << " " << particle.pz << " "
-                               << particle.p0 << " " << particle.mass << " "
-                               << particle.freeze_out_time << "\n";
+                    outputFile << std::fixed << particle.t << " " << particle.x << " " << particle.y
+                               << " " << particle.z << " " << particle.px << " " << particle.py
+                               << " " << particle.pz << " " << particle.p0 << " " << particle.mass
+                               << " " << particle.freeze_out_time << "\n";
                 }
             }
         }
     }
-
-    for (auto &[label, file]: protonFiles) {
-        file.close();
-    }
-    for (auto &[label, file]: neutronFiles) {
-        file.close();
-    }
+    for (auto &[label, file]: protonFiles) file.close();
+    for (auto &[label, file]: neutronFiles) file.close();
 }
 
 void processParticleData(const std::string &particle_file, const std::string &outputDir) {
@@ -315,6 +303,9 @@ void processParticleData(const std::string &particle_file, const std::string &ou
     classifyAndCountEvents(multiplicity, centralityBounds, eventCentrality, centralityEventCounts);
     for (const auto &[label, count]: centralityEventCounts) {
         std::cout << "Number of events in centrality range " << label << ": " << count << std::endl;
+        std::string centralityDir = outputDir;
+        centralityDir.append("/").append(label);
+        checkAndCreateDataOutputDir(centralityDir);
     }
     writeParticlesByCentrality(allEvents, eventCentrality, outputDir);
 }

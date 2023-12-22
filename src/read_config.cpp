@@ -3,10 +3,10 @@
 //
 #include "../include/read_config.h"
 
-void initialize_config_from_parser(config_in &config,
-                                   const config_parser &read_config_parser) {
+void initialize_config_from_parser(config_in &config, const config_parser &read_config_parser) {
     config.calculation_mode = read_config_parser.get("Mode");// "smash" or "urqmd"
     config.mix_events       = read_config_parser.get_int("MixEvents");
+    config.needCentrality   = read_config_parser.get_bool("needCentrality");
     //select particles
     config.set_on        = read_config_parser.get_bool("switch");
     config.proton_limit  = read_config_parser.get_int("proton_limit");

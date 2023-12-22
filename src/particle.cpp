@@ -51,17 +51,17 @@ bool ParticleData::operator!=(const ParticleData &other) const {
            std::abs(p0 - other.p0) > tolerance || std::abs(px - other.px) > tolerance ||
            std::abs(py - other.py) > tolerance || std::abs(pz - other.pz) > tolerance;
 }
-void ParticleData::get_twobody_data(const ParticleData &proton, const ParticleData &neutron) {
-    freeze_out_time = std::max(proton.freeze_out_time, neutron.freeze_out_time);
-    x               = (proton.x + neutron.x) / 2.0;
-    y               = (proton.y + neutron.y) / 2.0;
-    z               = (proton.z + neutron.z) / 2.0;
-    p0              = proton.p0 + neutron.p0;
-    px              = proton.px + neutron.px;
-    py              = proton.py + neutron.py;
-    pz              = proton.pz + neutron.pz;
+void ParticleData::get_twobody_data(const ParticleData &p1, const ParticleData &p2) {
+    freeze_out_time = std::max(p1.freeze_out_time, p2.freeze_out_time);
+    x               = (p1.x + p2.x) / 2.0;
+    y               = (p1.y + p2.y) / 2.0;
+    z               = (p1.z + p2.z) / 2.0;
+    p0              = p1.p0 + p2.p0;
+    px              = p1.px + p2.px;
+    py              = p1.py + p2.py;
+    pz              = p1.pz + p2.pz;
     mass            = std::sqrt(p0 * p0 - px * px - py * py - pz * pz);
-    charge          = proton.charge + neutron.charge;
+    charge          = p1.charge + p2.charge;
     pdg             = 1000010020;
 }
 void ParticleData::get_fourbody_data(const ParticleData &p1, const ParticleData &p2,
@@ -86,30 +86,40 @@ double ParticleData::get_rapidity() const {
     return 0.5 * std::log((p0 + pz) / (p0 - pz));
 }
 
+double ParticleData::get_ita_rapidity() const {
+    double p_total = std::sqrt(px * px + py * py + pz * pz);
+    if (p_total <= pz) {
+        return 0.0;
+    }
+    return 0.5 * std::log((p_total + pz) / (p_total - pz));
+}
+
 //double ParticleData::get_pt() const { return std::sqrt(px * px + py * py); }
 
 void ParticleData::get_freeze_out_position() {
-    double vx = px / p0;
-    double vy = py / p0;
-    double vz = pz / p0;
-    double dt = t - freeze_out_time;
-    double dx = vx * dt;
-    double dy = vy * dt;
-    double dz = vz * dt;
-    x -= dx;
-    y -= dy;
-    z -= dz;
+
+    if (freeze_out_time == 0.0) {
+        return;
+    } else {
+        double vx = px / p0;
+        double vy = py / p0;
+        double vz = pz / p0;
+        double dt = t - freeze_out_time;
+        double dx = vx * dt;
+        double dy = vy * dt;
+        double dz = vz * dt;
+        x -= dx;
+        y -= dy;
+        z -= dz;
+    }
 }
 
 int EventData::countChargeParticles() const {
     int chargeParticleCount = 0;
     for (const auto &[type, particles]: particlesByType) {
         for (const auto &particle: particles) {
-            //            if (particle.charge != 0) {
-            //                chargeParticleCount++;
-            //            }
-
-            if (std::abs(particle.get_rapidity()) < 0.5) {
+            if (std::abs(particle.get_ita_rapidity()) < 0.5 && particle.charge != 0 &&
+                std::abs(particle.pdg) > 100) {
                 chargeParticleCount++;
             }
         }

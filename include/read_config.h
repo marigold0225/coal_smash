@@ -6,6 +6,7 @@
 typedef struct config_input {
     std::string calculation_mode;
     int mix_events;
+    bool needCentrality;
     //select particles
     bool set_on;
     int proton_limit;
@@ -28,5 +29,4 @@ typedef struct config_input {
     bool rac_tritium;
     bool rac_helium4;
 } config_in;
-void initialize_config_from_parser(config_in &config,
-                                   const config_parser &read_config_parser);
+void initialize_config_from_parser(config_in &config, const config_parser &read_config_parser);

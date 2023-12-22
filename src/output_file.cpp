@@ -17,23 +17,30 @@
 void output_cluster(const std::vector<ParticleData> &clusters, std::ofstream &output) {
     output << "t x y z px py pz p0 mass probability\n";
     for (const auto &cluster: clusters) {
-        output << std::fixed << std::setprecision(15) << cluster.freeze_out_time << " " << cluster.x
-               << " " << cluster.y << " " << cluster.z << " " << cluster.px << " " << cluster.py
-               << " " << cluster.pz << " " << cluster.p0 << " " << cluster.mass << " "
-               << cluster.probability << "\n";
+        output << cluster.freeze_out_time << " " << cluster.x << " " << cluster.y << " "
+               << cluster.z << " " << cluster.px << " " << cluster.py << " " << cluster.pz << " "
+               << cluster.p0 << " " << cluster.mass << " " << cluster.probability << "\n";
     }
 }
 
 
-void output_spv(std::vector<double> &d_mix_spv, const std::vector<double> &d_mix_ptv,
+void output_spv(std::map<std::string, std::vector<double>> &pt_array,
+                std::map<std::string, double> clusterCountByRapidity, double d_pt, int ptBins,
                 const std::string &filename, int total_batch) {
     std::ofstream output_file(filename, std::ios::out);
-    if (output_file.is_open()) {
-        for (int i = 0; i < d_mix_spv.size(); ++i) {
-            d_mix_spv[i] /= total_batch;
-            output_file << std::setw(15) << d_mix_ptv[i] << std::setw(15) << d_mix_spv[i]
-                        << std::endl;
+    if (!output_file.is_open()) {
+        throw std::runtime_error("Could not open file " + filename);
+    }
+    for (auto &[label, pts]: pt_array) {
+        output_file << "Rapidity range: " << label
+                    << ", cluster yield: " << clusterCountByRapidity[label] / total_batch
+                    << std::endl;
+        for (size_t i = 0; i < ptBins; ++i) {
+            double pt = d_pt / 2 + static_cast<double>(i) * d_pt;
+            pts[i] /= total_batch;
+            output_file << pt << "\t" << pts[i] << std::endl;
         }
+        output_file << std::endl;
     }
     output_file.close();
 }
