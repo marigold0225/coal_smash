@@ -71,14 +71,14 @@ fig, ax = plt.subplots(figsize=(8, 6))
 fig.suptitle('Particle Yield for Different Rapidity Ranges in 0-10 Centrality')
 
 # Read and plot proton data
-fileProton = f'../data/1000/{centrality}/p_pt_{centrality}.dat'
+fileProton = f'../data/50000/{centrality}/p_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileProton, markers, rapidity_ranges, M_proton, g_proton, 'Proton', True, colors)
 
 # Read and plot deuteron data
-fileDeutron = f'../data/1000/{centrality}/d_pt_{centrality}.dat'
+fileDeutron = f'../data/50000/{centrality}/d_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileDeutron, markers, rapidity_ranges, M_deutron, g_deutron, 'Deuteron', False, colors)
 
-fileAlpha = f'../data/1000/{centrality}/alpha_pt_{centrality}.dat'
+fileAlpha = f'../data/50000/{centrality}/alpha_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileAlpha, markers, rapidity_ranges, M_alpha, g_alpha, 'Alpha', False, colors)
 
 # Set plot properties

@@ -41,16 +41,16 @@ void writeParticlesByCentrality(std::map<int, EventData> &allEvents,
                                 const std::map<int, std::string> &eventCentrality,
                                 const std::string &outputDir);
 
-void processParticleData(const std::string &particle_filename, const std::string &outputDir);
+void processParticleData(const std::string &input_particle_filename, const std::string &outputDir);
 
-void readFile_smash(const std::string &filename, std::map<int, EventData> &all_Events);
+void readFileSmash(const std::string &filename, std::map<int, EventData> &all_Events);
 
 bool checkFileExists(const std::string &filename, std::vector<std::string> &labels,
                      const std::string &fileType);
 
-void read_batch_nuclei(const std::string &filename, int batchSize, BatchMap &batches);
+void readBatchNuclei(const std::string &filename, int batchSize, BatchMap &batch_nuclei);
 
-void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &batche_deutron);
+void readBatchDeutrons(const std::string &filename, std::vector<BatchData> &batche_deutron);
 
 void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,
                                 const std::string &protonFileName,

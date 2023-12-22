@@ -18,24 +18,24 @@ typedef struct ParticleData {
 
     bool operator!=(const ParticleData &other) const;
 
-    void update_position(double t_max);
+    void updatePosition(double t_max);
 
-    [[nodiscard]] ParticleData lorentz_boost(double beta_x, double beta_y, double beta_z) const;
+    [[nodiscard]] ParticleData lorentzBoost(double beta_x, double beta_y, double beta_z) const;
 
-    [[nodiscard]] double get_rapidity() const;
+    [[nodiscard]] double getRapidity() const;
 
-    [[nodiscard]] double get_ita_rapidity() const;
+    [[nodiscard]] double getArtifactRapidity() const;
 
     //Calculating Transverse Momentum
     //    [[nodiscard]] double get_pt() const;
 
     //get freeze out position
-    void get_freeze_out_position();
+    void getFreezeOutPosition();
 
-    void get_twobody_data(const ParticleData &p1, const ParticleData &p2);
+    void getTwobodyData(const ParticleData &p1, const ParticleData &p2);
 
-    void get_fourbody_data(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
-                           const ParticleData &n2);
+    void getFourbodyData(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
+                         const ParticleData &n2);
 
 
 } ParticleData;

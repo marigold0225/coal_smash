@@ -50,7 +50,7 @@ void ReadLine(const std::string &line, EventData &currentEvent) {
     }
 }
 
-void readFile_smash(const std::string &filename, std::map<int, EventData> &all_Events) {
+void readFileSmash(const std::string &filename, std::map<int, EventData> &all_Events) {
     std::ifstream file(filename);
     std::string line;
     EventData currentEvent;
@@ -87,7 +87,7 @@ void readFile_smash(const std::string &filename, std::map<int, EventData> &all_E
     }
 }
 
-void read_batch_nuclei(const std::string &filename, int batchSize, BatchMap &batches) {
+void readBatchNuclei(const std::string &filename, int batchSize, BatchMap &batches) {
     std::ifstream file(filename);
     std::string line;
     ParticleData particle{};
@@ -135,13 +135,15 @@ void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,
         neutronFile << "t x y z px py pz p0 mass t_out\n";
         for (auto &[pdgCode, particles]: particlesByType) {
             if (pdgCode == 2212 || pdgCode == 2112) {
+                std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
                 for (auto &particle: particles) {
-                    particle.get_freeze_out_position();
-                    std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
-                    outputFile << std::fixed << particle.t << " " << particle.x << " " << particle.y
-                               << " " << particle.z << " " << particle.px << " " << particle.py
-                               << " " << particle.pz << " " << particle.p0 << " " << particle.mass
-                               << " " << particle.freeze_out_time << "\n";
+                    writeNucleiData(particle, outputFile);
+                    //                    particle.getFreezeOutPosition();
+                    //                    std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
+                    //                    outputFile << std::fixed << particle.t << " " << particle.x << " " << particle.y
+                    //                               << " " << particle.z << " " << particle.px << " " << particle.py
+                    //                               << " " << particle.pz << " " << particle.p0 << " " << particle.mass
+                    //                               << " " << particle.freeze_out_time << "\n";
                 }
             }
         }
@@ -149,7 +151,7 @@ void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,
     protonFile.close();
     neutronFile.close();
 }
-void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &batches) {
+void readBatchDeutrons(const std::string &filename, std::vector<BatchData> &batche_deutron) {
     std::ifstream file(filename);
     std::string line;
     ParticleData particle;
@@ -160,7 +162,7 @@ void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &ba
         if (line.find("t x y z px py pz p0 mass probability") != std::string::npos) {
             if (!currentBatch.particles.empty()) {
                 currentBatch.eventCount = currentBatchNumber;
-                batches.push_back(currentBatch);
+                batche_deutron.push_back(currentBatch);
                 currentBatch.particles.clear();
                 currentBatchNumber++;
             }
@@ -176,7 +178,7 @@ void read_batch_deutrons(const std::string &filename, std::vector<BatchData> &ba
     }
     if (!currentBatch.particles.empty()) {
         currentBatch.eventCount = currentBatchNumber;
-        batches.push_back(currentBatch);
+        batche_deutron.push_back(currentBatch);
     }
 }
 
@@ -274,11 +276,12 @@ void writeParticlesByCentrality(std::map<int, EventData> &allEvents,
                 std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
                 outputFile << header;
                 for (auto &particle: particles) {
-                    particle.get_freeze_out_position();
-                    outputFile << std::fixed << particle.t << " " << particle.x << " " << particle.y
-                               << " " << particle.z << " " << particle.px << " " << particle.py
-                               << " " << particle.pz << " " << particle.p0 << " " << particle.mass
-                               << " " << particle.freeze_out_time << "\n";
+                    writeNucleiData(particle, outputFile);
+                    //                    particle.getFreezeOutPosition();
+                    //                    outputFile << std::fixed << particle.t << " " << particle.x << " " << particle.y
+                    //                               << " " << particle.z << " " << particle.px << " " << particle.py
+                    //                               << " " << particle.pz << " " << particle.p0 << " " << particle.mass
+                    //                               << " " << particle.freeze_out_time << "\n";
                 }
             }
         }
@@ -289,7 +292,7 @@ void writeParticlesByCentrality(std::map<int, EventData> &allEvents,
 
 void processParticleData(const std::string &particle_file, const std::string &outputDir) {
     std::map<int, EventData> allEvents;
-    readFile_smash(particle_file, allEvents);
+    readFileSmash(particle_file, allEvents);
 
     std::cout << "number of events: " << allEvents.size() << std::endl;
 

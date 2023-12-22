@@ -8,43 +8,10 @@
 #include <random>
 
 
-double calculate_fraction_batch_factor(const std::vector<ParticleData> &protons,
-                                       const std::vector<ParticleData> &neutrons,
-                                       std::vector<ParticleData> &protons_fraction,
-                                       std::vector<ParticleData> &neutrons_fraction,
-                                       const config_in &config_input) {
-    std::random_device rd;
-    std::mt19937 g(rd());
-
-    protons_fraction = protons;
-    std::shuffle(protons_fraction.begin(), protons_fraction.end(), g);
-    if (protons_fraction.size() > static_cast<size_t>(config_input.proton_limit)) {
-        protons_fraction.resize(config_input.proton_limit);
-    }
-
-    neutrons_fraction = neutrons;
-    std::shuffle(neutrons_fraction.begin(), neutrons_fraction.end(), g);
-    if (neutrons_fraction.size() > static_cast<size_t>(config_input.neutron_limit)) {
-        neutrons_fraction.resize(config_input.neutron_limit);
-    }
-
-    auto kp     = static_cast<double>(protons.size());
-    auto kn     = static_cast<double>(neutrons.size());
-    auto kp_mix = static_cast<double>(protons_fraction.size());
-    auto kn_mix = static_cast<double>(neutrons_fraction.size());
-
-    double factor = (kp * (kp - 1) / (kp_mix * (kp_mix - 1)) * 2.0) *
-                    (kn * (kn - 1) / (kn_mix * (kn_mix - 1)) * 2.0);
-    //    double factor = (kp * kn) / (kp_mix * kn_mix);
-
-    return factor;
-}
-
-
-ParticleData calculate_info_alpha_twobody(const ParticleData &d1, const ParticleData &d2,
-                                          const config_in &config_input,
-                                          std::map<std::string, std::vector<double>> &pt_array,
-                                          std::map<std::string, RapidityRange> &rapidityRange) {
+ParticleData dDToAlpha(const ParticleData &d1, const ParticleData &d2,
+                       const config_in &config_input,
+                       std::map<std::string, std::vector<double>> &pt_array,
+                       std::map<std::string, RapidityRange> &rapidityRange) {
     double rms      = config_input.alpha_rms;
     double hbar2    = 0.19733 * 0.19733;
     double rap_nucl = config_input.alpha_rap_cut_nucl;
@@ -52,8 +19,8 @@ ParticleData calculate_info_alpha_twobody(const ParticleData &d1, const Particle
     double d_pt     = config_input.alpha_mix_dpt;
     ParticleData alpha{};
     //Rapidity check
-    double rapidity_deutron1 = calculate_rap(d1.p0, d1.pz);
-    double rapidity_deutron2 = calculate_rap(d2.p0, d2.pz);
+    double rapidity_deutron1 = calculateParticleRapidity(d1.p0, d1.pz);
+    double rapidity_deutron2 = calculateParticleRapidity(d2.p0, d2.pz);
     if (std::abs(rapidity_deutron1) > rap_nucl || std::abs(rapidity_deutron2) > rap_nucl) {
         return ParticleData{};
     }
@@ -62,7 +29,7 @@ ParticleData calculate_info_alpha_twobody(const ParticleData &d1, const Particle
     double py_total       = d1.py + d2.py;
     double pz_total       = d1.pz + d2.pz;
     double p0_total       = d1.p0 + d2.p0;
-    double rapidity_alpha = calculate_rap(p0_total, pz_total);
+    double rapidity_alpha = calculateParticleRapidity(p0_total, pz_total);
     if (std::abs(rapidity_alpha) > rap_coal) {
         return ParticleData{};
     }
@@ -70,16 +37,16 @@ ParticleData calculate_info_alpha_twobody(const ParticleData &d1, const Particle
     const double beta_x   = px_total / p0_total;
     const double beta_y   = py_total / p0_total;
     const double beta_z   = pz_total / p0_total;
-    ParticleData boost_d1 = d1.lorentz_boost(beta_x, beta_y, beta_z);
-    ParticleData boost_d2 = d2.lorentz_boost(beta_x, beta_y, beta_z);
+    ParticleData boost_d1 = d1.lorentzBoost(beta_x, beta_y, beta_z);
+    ParticleData boost_d2 = d2.lorentzBoost(beta_x, beta_y, beta_z);
     //find t_boost_max in d1 d2
     double t_boost_max = std::max(boost_d1.freeze_out_time, boost_d2.freeze_out_time);
     //update position
-    boost_d1.update_position(t_boost_max);
-    boost_d2.update_position(t_boost_max);
+    boost_d1.updatePosition(t_boost_max);
+    boost_d2.updatePosition(t_boost_max);
     //Calculate the position difference and momentum difference between two particles
     auto [diff_dx, diff_dy, diff_dz, diff_dpx, diff_dpy, diff_dpz] =
-            calculateTwoBodyDifferences(boost_d1, boost_d2);
+            TwoBodyJacobi(boost_d1, boost_d2);
 
     double diff_dr = sqrt(diff_dx * diff_dx + diff_dy * diff_dy + diff_dz * diff_dz);
     double diff_dp = sqrt(diff_dpx * diff_dpx + diff_dpy * diff_dpy + diff_dpz * diff_dpz);
@@ -96,19 +63,16 @@ ParticleData calculate_info_alpha_twobody(const ParticleData &d1, const Particle
     alpha.probability = 1.0 / 4 * 8 *
                         exp(-diff_dr * diff_dr * 3 / rms / rms / 4 -
                             diff_dp * diff_dp * rms * rms * 4 / 3 / hbar2);
-    //    alpha.get_twobody_data(boost_d1, boost_d2);
-    //    ParticleData alpha_boost = alpha.lorentz_boost(-beta_x, -beta_y, -beta_z);
-    alpha.get_twobody_data(d1, d2);
+    alpha.getTwobodyData(d1, d2);
     const double pt = sqrt(px_total * px_total + py_total * py_total);
-    update_momentum_array(pt, alpha.probability, d_pt, rapidity_alpha, pt_array, rapidityRange);
+    updateMomentumArray(pt, alpha.probability, d_pt, rapidity_alpha, pt_array, rapidityRange);
     return alpha;
 }
 
-ParticleData calculate_info_alpha_fourbody(const ParticleData &p1, const ParticleData &p2,
-                                           const ParticleData &n1, const ParticleData &n2,
-                                           const config_in &config_input,
-                                           std::map<std::string, std::vector<double>> &pt_array,
-                                           std::map<std::string, RapidityRange> &rapidityRangv) {
+ParticleData pPNNToAlpha(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
+                         const ParticleData &n2, const config_in &config_input,
+                         std::map<std::string, std::vector<double>> &pt_array,
+                         std::map<std::string, RapidityRange> &rapidityRange) {
     double sig1                  = config_input.alpha_rms;
     double sig2                  = config_input.alpha_rms;
     double sig3                  = config_input.alpha_rms;
@@ -119,10 +83,10 @@ ParticleData calculate_info_alpha_fourbody(const ParticleData &p1, const Particl
 
     ParticleData alpha_particle{};
     //Rapidity check
-    double rapidity_proton1  = calculate_rap(p1.p0, p1.pz);
-    double rapidity_proton2  = calculate_rap(p2.p0, p2.pz);
-    double rapidity_neutron1 = calculate_rap(n1.p0, n1.pz);
-    double rapidity_neutron2 = calculate_rap(n2.p0, n2.pz);
+    double rapidity_proton1  = calculateParticleRapidity(p1.p0, p1.pz);
+    double rapidity_proton2  = calculateParticleRapidity(p2.p0, p2.pz);
+    double rapidity_neutron1 = calculateParticleRapidity(n1.p0, n1.pz);
+    double rapidity_neutron2 = calculateParticleRapidity(n2.p0, n2.pz);
     if (std::abs(rapidity_proton1) > rap_nucl || std::abs(rapidity_proton2) > rap_nucl ||
         std::abs(rapidity_neutron1) > rap_nucl || std::abs(rapidity_neutron2) > rap_nucl) {
         return ParticleData{};
@@ -132,7 +96,7 @@ ParticleData calculate_info_alpha_fourbody(const ParticleData &p1, const Particl
     double py_total       = p1.py + p2.py + n1.py + n2.py;
     double pz_total       = p1.pz + p2.pz + n1.pz + n2.pz;
     double p0_total       = p1.p0 + p2.p0 + n1.p0 + n2.p0;
-    double rapidity_alpha = calculate_rap(p0_total, pz_total);
+    double rapidity_alpha = calculateParticleRapidity(p0_total, pz_total);
     if (std::abs(rapidity_alpha) > rap_coal) {
         return ParticleData{};
     }
@@ -140,21 +104,21 @@ ParticleData calculate_info_alpha_fourbody(const ParticleData &p1, const Particl
     const double beta_x   = px_total / p0_total;
     const double beta_y   = py_total / p0_total;
     const double beta_z   = pz_total / p0_total;
-    ParticleData boost_p1 = p1.lorentz_boost(beta_x, beta_y, beta_z);
-    ParticleData boost_p2 = p2.lorentz_boost(beta_x, beta_y, beta_z);
-    ParticleData boost_n1 = n1.lorentz_boost(beta_x, beta_y, beta_z);
-    ParticleData boost_n2 = n2.lorentz_boost(beta_x, beta_y, beta_z);
+    ParticleData boost_p1 = p1.lorentzBoost(beta_x, beta_y, beta_z);
+    ParticleData boost_p2 = p2.lorentzBoost(beta_x, beta_y, beta_z);
+    ParticleData boost_n1 = n1.lorentzBoost(beta_x, beta_y, beta_z);
+    ParticleData boost_n2 = n2.lorentzBoost(beta_x, beta_y, beta_z);
     //find t_max in p1 p2 n1 n2
     double t_max = std::max(std::max(boost_p1.freeze_out_time, boost_p2.freeze_out_time),
                             std::max(boost_n1.freeze_out_time, boost_n2.freeze_out_time));
     //update position
-    boost_p1.update_position(t_max);
-    boost_p2.update_position(t_max);
-    boost_n1.update_position(t_max);
-    boost_n2.update_position(t_max);
+    boost_p1.updatePosition(t_max);
+    boost_p2.updatePosition(t_max);
+    boost_n1.updatePosition(t_max);
+    boost_n2.updatePosition(t_max);
     //Calculate the position difference and momentum difference between two particles two by two
     auto [diff_dr_p1p2, diff_dp_p1p2, diff_dr_p1p2n1, diff_dp_p1p2n1, diff_dr_p1p2n1n2,
-          diff_dp_p1p2n1n2] = calculate_diff_fourbody(boost_p1, boost_p2, boost_n1, boost_n2);
+          diff_dp_p1p2n1n2] = fourBodyJacobi(boost_p1, boost_p2, boost_n1, boost_n2);
 
     if (diff_dr_p1p2 > config_input.cut_dr * sig1 ||
         diff_dp_p1p2 > config_input.cut_dp * 0.19733 / sig1 ||
@@ -176,83 +140,28 @@ ParticleData calculate_info_alpha_fourbody(const ParticleData &p1, const Particl
     } else {
         alpha_particle.probability = 0;
     }
-    alpha_particle.get_fourbody_data(boost_p1, boost_p2, boost_n1, boost_n2);
-    ParticleData alpha_particle_boost = alpha_particle.lorentz_boost(-beta_x, -beta_y, -beta_z);
+    alpha_particle.getFourbodyData(boost_p1, boost_p2, boost_n1, boost_n2);
+    ParticleData alpha_particle_boost = alpha_particle.lorentzBoost(-beta_x, -beta_y, -beta_z);
     const double pt                   = sqrt(px_total * px_total + py_total * py_total);
-    update_momentum_array(pt, alpha_particle_boost.probability, config_input.alpha_mix_dpt,
-                          rapidity_alpha, pt_array, rapidityRangv);
+    updateMomentumArray(pt, alpha_particle_boost.probability, config_input.alpha_mix_dpt,
+                        rapidity_alpha, pt_array, rapidityRange);
     return alpha_particle_boost;
 }
-std::tuple<double, double, double, double, double, double>
-calculate_diff_fourbody(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
-                        const ParticleData &n2) {
-    double dx_p1p2      = (p1.x - p2.x) / sqrt(2.0);
-    double dy_p1p2      = (p1.y - p2.y) / sqrt(2.0);
-    double dz_p1p2      = (p1.z - p2.z) / sqrt(2.0);
-    double dpx_p1p2     = (p2.mass * p1.px - p1.mass * p2.px) / (p1.mass + p2.mass) * sqrt(2.0);
-    double dpy_p1p2     = (p2.mass * p1.py - p1.mass * p2.py) / (p1.mass + p2.mass) * sqrt(2.0);
-    double dpz_p1p2     = (p2.mass * p1.pz - p1.mass * p2.pz) / (p1.mass + p2.mass) * sqrt(2.0);
-    double diff_dr_p1p2 = sqrt(dx_p1p2 * dx_p1p2 + dy_p1p2 * dy_p1p2 + dz_p1p2 * dz_p1p2);
-    double diff_dp_p1p2 = sqrt(dpx_p1p2 * dpx_p1p2 + dpy_p1p2 * dpy_p1p2 + dpz_p1p2 * dpz_p1p2);
 
-    double dx_p1p2n1 = (p1.mass * p1.x + p2.mass * p2.x - (p1.mass + p2.mass) * n1.x) /
-                       (p1.mass + p2.mass) * sqrt(2.0 / 3.0);
-    double dy_p1p2n1 = (p1.mass * p1.y + p2.mass * p2.y - (p1.mass + p2.mass) * n1.y) /
-                       (p1.mass + p2.mass) * sqrt(2.0 / 3.0);
-    double dz_p1p2n1 = (p1.mass * p1.z + p2.mass * p2.z - (p1.mass + p2.mass) * n1.z) /
-                       (p1.mass + p2.mass) * sqrt(2.0 / 3.0);
-    double dpx_p1p2n1 = (n1.mass * p1.px + n1.mass * p2.px - (p1.mass + p2.mass) * n1.px) /
-                        (p1.mass + p2.mass + n1.mass) * sqrt(6) / 2;
-    double dpy_p1p2n1 = (n1.mass * p1.py + n1.mass * p2.py - (p1.mass + p2.mass) * n1.py) /
-                        (p1.mass + p2.mass + n1.mass) * sqrt(6) / 2;
-    double dpz_p1p2n1 = (n1.mass * p1.pz + n1.mass * p2.pz - (p1.mass + p2.mass) * n1.pz) /
-                        (p1.mass + p2.mass + n1.mass) * sqrt(6) / 2;
-    double diff_dr_p1p2n1 =
-            sqrt(dx_p1p2n1 * dx_p1p2n1 + dy_p1p2n1 * dy_p1p2n1 + dz_p1p2n1 * dz_p1p2n1);
-    double diff_dp_p1p2n1 =
-            sqrt(dpx_p1p2n1 * dpx_p1p2n1 + dpy_p1p2n1 * dpy_p1p2n1 + dpz_p1p2n1 * dpz_p1p2n1);
 
-    double dx_p1p2n1n2 = (p1.mass * p1.x + p2.mass * p2.x + n1.mass * n1.x -
-                          (p1.mass + p2.mass + n1.mass) * n2.x) /
-                         (p1.mass + p2.mass + n1.mass) * sqrt(3.0 / 4.0);
-    double dy_p1p2n1n2 = (p1.mass * p1.y + p2.mass * p2.y + n1.mass * n1.y -
-                          (p1.mass + p2.mass + n1.mass) * n2.y) /
-                         (p1.mass + p2.mass + n1.mass) * sqrt(3.0 / 4.0);
-    double dz_p1p2n1n2 = (p1.mass * p1.z + p2.mass * p2.z + n1.mass * n1.z -
-                          (p1.mass + p2.mass + n1.mass) * n2.z) /
-                         (p1.mass + p2.mass + n1.mass) * sqrt(3.0 / 4.0);
-    double dpx_p1p2n1n2 =
-            (n2.mass * (p1.px + p2.px + n1.px) - (p1.mass + p2.mass + n1.mass) * n2.px) /
-            (p1.mass + p2.mass + n1.mass + n2.mass) * sqrt(4.0 / 3.0);
-    double dpy_p1p2n1n2 =
-            (n2.mass * (p1.py + p2.py + n1.py) - (p1.mass + p2.mass + n1.mass) * n2.py) /
-            (p1.mass + p2.mass + n1.mass + n2.mass) * sqrt(4.0 / 3.0);
-    double dpz_p1p2n1n2 =
-            (n2.mass * (p1.pz + p2.pz + n1.pz) - (p1.mass + p2.mass + n1.mass) * n2.pz) /
-            (p1.mass + p2.mass + n1.mass + n2.mass) * sqrt(4.0 / 3.0);
-    double diff_dr_p1p2n1n2 =
-            sqrt(dx_p1p2n1n2 * dx_p1p2n1n2 + dy_p1p2n1n2 * dy_p1p2n1n2 + dz_p1p2n1n2 * dz_p1p2n1n2);
-    double diff_dp_p1p2n1n2 = sqrt(dpx_p1p2n1n2 * dpx_p1p2n1n2 + dpy_p1p2n1n2 * dpy_p1p2n1n2 +
-                                   dpz_p1p2n1n2 * dpz_p1p2n1n2);
-    return std::make_tuple(diff_dr_p1p2, diff_dp_p1p2, diff_dr_p1p2n1, diff_dp_p1p2n1,
-                           diff_dr_p1p2n1n2, diff_dp_p1p2n1n2);
-}
-
-void calculate_alpha_fourbody_batch(const std::vector<ParticleData> &protons,
-                                    const std::vector<ParticleData> &neutrons,
-                                    const config_in &config_input,
-                                    std::map<std::string, std::vector<double>> &pt_array,
-                                    std::map<std::string, RapidityRange> &rapidityRang,
-                                    double &batch_alpha, int eventsInBatch,
-                                    std::vector<ParticleData> &alpha) {
+void processAlphaOneBatch4(const std::vector<ParticleData> &protons,
+                           const std::vector<ParticleData> &neutrons, const config_in &config_input,
+                           std::map<std::string, std::vector<double>> &pt_array,
+                           std::map<std::string, RapidityRange> &rapidityRang, double &batch_alpha,
+                           int eventsInBatch, std::vector<ParticleData> &alpha) {
     alpha.clear();
     batch_alpha = 0.0;
     int ptBins  = 10;
     double d_pt = config_input.alpha_mix_dpt;
 
     std::vector<ParticleData> protons_fraction, neutrons_fraction;
-    double factor = calculate_fraction_batch_factor(protons, neutrons, protons_fraction,
-                                                    neutrons_fraction, config_input);
+    double factor = samplingAndScalingFactor(protons, neutrons, protons_fraction, neutrons_fraction,
+                                             config_input);
 
     const int mixEvents = eventsInBatch * eventsInBatch * eventsInBatch * eventsInBatch;
     std::vector<std::pair<ParticleData, double>> potential_alpha;
@@ -262,7 +171,7 @@ void calculate_alpha_fourbody_batch(const std::vector<ParticleData> &protons,
         for (size_t j = i + 1; j < protons_fraction.size(); j++) {
             for (size_t k = 0; k < neutrons_fraction.size(); k++) {
                 for (size_t l = k + 1; l < neutrons_fraction.size(); l++) {
-                    ParticleData alpha_particle = calculate_info_alpha_fourbody(
+                    ParticleData alpha_particle = pPNNToAlpha(
                             protons_fraction[i], protons_fraction[j], neutrons_fraction[k],
                             neutrons_fraction[l], config_input, pt_array, rapidityRang);
                     if (alpha_particle.probability > 0) {
@@ -274,7 +183,7 @@ void calculate_alpha_fourbody_batch(const std::vector<ParticleData> &protons,
             }
         }
     }
-    //    weighted_sampling(alpha, potential_alpha, cumulated_probabilities, batch_alpha);
+    //    weightedSampling(alpha, potential_alpha, cumulated_probabilities, batch_alpha);
 
     for (auto &[label, pts]: pt_array) {
         for (size_t k = 0; k < ptBins; ++k) {
@@ -286,22 +195,24 @@ void calculate_alpha_fourbody_batch(const std::vector<ParticleData> &protons,
     }
 }
 
-void calculate_alpha_fourbody(const std::string &protonFile, const std::string &neutronFile,
-                              const std::string &alphaFile, std::string &ptFile,
-                              const config_in &configInput,
-                              std::map<std::string, std::vector<double>> &pt_array,
-                              std::map<std::string, RapidityRange> &rapidityRang) {
+void calculateAlphaAllBatch4(const std::string &protonFile, const std::string &neutronFile,
+                             const std::string &alphaFile, std::string &ptFile,
+                             const config_in &configInput,
+                             std::map<std::string, std::vector<double>> &pt_array,
+                             std::map<std::string, RapidityRange> &rapidityRang) {
     BatchMap protonBatches, neutronBatches;
     double total_alpha = 0.0;
     int total_batches  = 0;
     int batchSize      = configInput.mix_events;
     int ptBins         = 10;
     double d_pt        = configInput.alpha_mix_dpt;
+    std::map<std::string, double> clusterCountByRapidity;
     for (auto &[label, _]: rapidityRang) {
-        pt_array[label] = std::vector<double>(ptBins, 0.0);
+        pt_array[label]               = std::vector<double>(ptBins, 0.0);
+        clusterCountByRapidity[label] = 0.0;
     }
-    read_batch_nuclei(protonFile, batchSize, protonBatches);
-    read_batch_nuclei(neutronFile, batchSize, neutronBatches);
+    readBatchNuclei(protonFile, batchSize, protonBatches);
+    readBatchNuclei(neutronFile, batchSize, neutronBatches);
 
     std::ofstream alphaFileOut(alphaFile, std::ios::out);
 
@@ -316,8 +227,8 @@ void calculate_alpha_fourbody(const std::string &protonFile, const std::string &
 
             double batch_number_alpha = 0.0;
             std::vector<ParticleData> batch_alpha;
-            calculate_alpha_fourbody_batch(protons, neutrons, configInput, pt_array, rapidityRang,
-                                           batch_number_alpha, eventsInBatch, batch_alpha);
+            processAlphaOneBatch4(protons, neutrons, configInput, pt_array, rapidityRang,
+                                  batch_number_alpha, eventsInBatch, batch_alpha);
             total_batch_alpha += batch_number_alpha / eventsInBatch / eventsInBatch /
                                  eventsInBatch / eventsInBatch;
             std::cout << "Batch " << batchNumber << " repetition " << repetition << " alpha: "
@@ -328,7 +239,7 @@ void calculate_alpha_fourbody(const std::string &protonFile, const std::string &
         total_alpha += total_batch_alpha / 10;
         total_batches++;
         //        if (alphaFileOut.is_open()) {
-        //            output_cluster(batch_average_alpha, alphaFileOut);
+        //            outputCluster(batch_average_alpha, alphaFileOut);
         //        }
         //        std::cout << "average number of alpha per batch:" << total_batch_alpha / 10 << std::endl;
         for (auto &[label, pts]: pt_array) {
@@ -340,14 +251,12 @@ void calculate_alpha_fourbody(const std::string &protonFile, const std::string &
     alphaFileOut.close();
     const double average_alpha = total_alpha > 0 ? total_alpha / total_batches : 0.0;
     std::cout << "average number of alpha:" << average_alpha << std::endl;
-    //output_spv(pt_array, d_pt, ptBins, ptFile, total_batches);
+    outputPt(pt_array, clusterCountByRapidity, d_pt, ptBins, ptFile, total_batches);
 }
-void calculate_alpha_twobody_batch(const std::vector<ParticleData> &deutrons,
-                                   const config_in &config_input,
-                                   std::map<std::string, std::vector<double>> &pt_array,
-                                   std::map<std::string, RapidityRange> &rapidityRange,
-                                   double &batch_alpha, int eventsInBatch,
-                                   std::vector<ParticleData> &alpha) {
+void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons, const config_in &config_input,
+                           std::map<std::string, std::vector<double>> &pt_array,
+                           std::map<std::string, RapidityRange> &rapidityRange, double &batch_alpha,
+                           int eventsInBatch, std::vector<ParticleData> &alpha) {
     alpha.clear();
     batch_alpha         = 0.0;
     int ptBins          = 10;
@@ -359,8 +268,8 @@ void calculate_alpha_twobody_batch(const std::vector<ParticleData> &deutrons,
 
     for (size_t i = 0; i < deutrons.size(); i++) {
         for (size_t j = i + 1; j < deutrons.size(); j++) {
-            ParticleData alpha_particle = calculate_info_alpha_twobody(
-                    deutrons[i], deutrons[j], config_input, pt_array, rapidityRange);
+            ParticleData alpha_particle =
+                    dDToAlpha(deutrons[i], deutrons[j], config_input, pt_array, rapidityRange);
             if (alpha_particle.probability > 0) {
                 potential_alpha.emplace_back(alpha_particle, alpha_particle.probability);
                 batch_alpha += alpha_particle.probability;
@@ -369,7 +278,7 @@ void calculate_alpha_twobody_batch(const std::vector<ParticleData> &deutrons,
         }
     }
 
-    weighted_sampling(alpha, potential_alpha, cumulated_probabilities, batch_alpha);
+    weightedSampling(alpha, potential_alpha, cumulated_probabilities, batch_alpha);
 
     for (auto &[label, pts]: pt_array) {
         for (size_t k = 0; k < ptBins; ++k) {
@@ -380,7 +289,7 @@ void calculate_alpha_twobody_batch(const std::vector<ParticleData> &deutrons,
         }
     }
 }
-void calculate_alpha_twobody(const std::string &deuteronFile, const std::string &alphaFile,
+void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string &alphaFile,
                              std::string &momentumFile, const config_in &configInput,
                              std::map<std::string, std::vector<double>> &pt_array,
                              std::map<std::string, RapidityRange> &rapidityRange) {
@@ -397,7 +306,7 @@ void calculate_alpha_twobody(const std::string &deuteronFile, const std::string 
     }
 
     std::vector<BatchData> deuteronBatches;
-    read_batch_deutrons(deuteronFile, deuteronBatches);
+    readBatchDeutrons(deuteronFile, deuteronBatches);
 
     std::ofstream alphaFileOut(alphaFile, std::ios::out);
 
@@ -407,17 +316,17 @@ void calculate_alpha_twobody(const std::string &deuteronFile, const std::string 
 
         double batch_number_alpha = 0.0;
         std::vector<ParticleData> batch_alpha;
-        calculate_alpha_twobody_batch(deutrons, configInput, pt_array, rapidityRange,
-                                      batch_number_alpha, mixEvents, batch_alpha);
+        processAlphaOneBatch2(deutrons, configInput, pt_array, rapidityRange, batch_number_alpha,
+                              mixEvents, batch_alpha);
         total_alpha += batch_number_alpha / mixEvents / mixEvents;
         total_batches++;
         if (alphaFileOut.is_open()) {
-            output_cluster(batch_alpha, alphaFileOut);
+            outputCluster(batch_alpha, alphaFileOut);
         }
         std::cout << "Average number of alpha per batch (Batch " << batchNumber
                   << "): " << batch_number_alpha / mixEvents / mixEvents << std::endl;
         for (const auto &alpha: batch_alpha) {
-            double rapidity = alpha.get_rapidity();
+            double rapidity = alpha.getRapidity();
             for (const auto &[label, range]: rapidityRange) {
                 if (rapidity >= range.min && rapidity < range.max) {
                     clusterCountByRapidity[label] +=
@@ -432,5 +341,5 @@ void calculate_alpha_twobody(const std::string &deuteronFile, const std::string 
     const double average_alpha = total_batches > 0 ? total_alpha / total_batches : 0.0;
     std::cout << "Average number of alpha: " << average_alpha << std::endl;
 
-    output_spv(pt_array, clusterCountByRapidity, d_pt, ptBins, momentumFile, total_batches);
+    outputPt(pt_array, clusterCountByRapidity, d_pt, ptBins, momentumFile, total_batches);
 }

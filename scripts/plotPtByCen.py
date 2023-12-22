@@ -32,7 +32,7 @@ def read_and_plot_pt(ax, filepath, scale_factors, markers):
     for i, (rapidity_data, scale, marker) in enumerate(zip(data, scale_factors, markers)):
         rapidity_data = np.array(rapidity_data)
         x = rapidity_data[:, 0]
-        y = rapidity_data[:, 1] / 0.2 * scale
+        y = rapidity_data[:, 1] / 0.1 * scale
         ax.plot(x, y, marker=marker, linestyle='-', label=rapidity_ranges[i], markersize=8)
 
 
@@ -51,14 +51,14 @@ fig.suptitle('Transverse momentum distribution for different rapidity ranges')
 
 # Plot the data for each centrality
 for i, centrality in enumerate(centrality_ranges):
-    filename = f'../data/6/{centrality}/d_pt_{centrality}.dat'
+    filename = f'../data/50000/{centrality}/alpha_pt_{centrality}.dat'
     read_and_plot_pt(axs[i], filename, scale_factors, markers)
 
     axs[i].set_title(f'Centrality {centrality}')
     axs[i].set_xlabel('Pt (GeV/c)')
     axs[i].set_yscale('log')
-    axs[i].set_xlim(0, 2.5)
-    axs[i].set_ylim(10 ** (-15), 100)
+    axs[i].set_xlim(0, 5)
+    axs[i].set_ylim(10 ** (-17), 10)
     axs[i].grid(True)
     if i == 0:
         axs[i].set_ylabel('Probability Density (a.u.)')

@@ -29,4 +29,4 @@ typedef struct config_input {
     bool rac_tritium;
     bool rac_helium4;
 } config_in;
-void initialize_config_from_parser(config_in &config, const config_parser &read_config_parser);
+void initializeConfigFromParser(config_in &config, const config_parser &read_config_parser);
