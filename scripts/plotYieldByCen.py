@@ -12,9 +12,11 @@ dy = 0.1
 g_proton = 2
 g_deutron = 3
 g_alpha = 1
+g_be = 1
 M_proton = 0.938
 M_deutron = 1.875
 M_alpha = 3.727
+M_Be = 8.005
 
 # experimental data
 proton_yields = 43.02
@@ -71,22 +73,25 @@ fig, ax = plt.subplots(figsize=(8, 6))
 fig.suptitle('Particle Yield for Different Rapidity Ranges in 0-10 Centrality')
 
 # Read and plot proton data
-fileProton = f'../data/50000/{centrality}/p_pt_{centrality}.dat'
+fileProton = f'../data/1000/{centrality}/p_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileProton, markers, rapidity_ranges, M_proton, g_proton, 'Proton', True, colors)
 
 # Read and plot deuteron data
-fileDeutron = f'../data/50000/{centrality}/d_pt_{centrality}.dat'
+fileDeutron = f'../data/1000/{centrality}/d_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileDeutron, markers, rapidity_ranges, M_deutron, g_deutron, 'Deuteron', False, colors)
 
-fileAlpha = f'../data/50000/{centrality}/alpha_pt_{centrality}.dat'
+fileAlpha = f'../data/1000/{centrality}/alpha_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileAlpha, markers, rapidity_ranges, M_alpha, g_alpha, 'Alpha', False, colors)
+
+fileBe = f'../data/1000/{centrality}/Be_pt_{centrality}.dat'
+read_and_plot_yield(ax, fileBe, markers, rapidity_ranges, M_Be, g_be, 'Be', False, colors)
 
 # Set plot properties
 ax.set_title(f'Au+Au {centrality}% 3GeV', fontsize=20)
 ax.set_xlabel('Mass (GeV/c²)', fontsize=22)
-ax.set_xlim(0.5, 4)
+ax.set_xlim(0.5, 10)
 ax.set_yscale('log')
-ax.set_ylim(0.06, 200)
+ax.set_ylim(1e-8, 200)
 # add experimental data
 ax.scatter(M_proton, proton_yields, color='g', marker='*', s=100)  # 星号标记，更大尺寸
 ax.scatter(M_deutron, deuteron_yields, color='g', marker='*', s=100)

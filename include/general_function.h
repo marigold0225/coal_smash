@@ -4,8 +4,10 @@
 #pragma once
 #include "particle.h"
 #include "read_particle_data.h"
+#include <functional>
 #include <string>
 
+RapidityMap defineRapidityRange();
 
 double samplingAndScalingFactor(const std::vector<ParticleData> &protons,
                                 const std::vector<ParticleData> &neutrons,
@@ -15,7 +17,7 @@ double samplingAndScalingFactor(const std::vector<ParticleData> &protons,
 
 double calculateParticleRapidity(double p0, double pz);
 
-void updateMomentumArray(double pt, double probability, double d_pt, double rap,
+void updateMomentumArray(double pt, double probability, double d_pt, int ptBins, double rap,
                          std::map<std::string, std::vector<double>> &pt_array,
                          const std::map<std::string, RapidityRange> &rapidityRange);
 

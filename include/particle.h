@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <map>
+#include <string>
 #include <vector>
 
 typedef struct ParticleData {
@@ -26,23 +27,28 @@ typedef struct ParticleData {
 
     [[nodiscard]] double getArtifactRapidity() const;
 
-    //Calculating Transverse Momentum
     //    [[nodiscard]] double get_pt() const;
 
-    //get freeze out position
     void getFreezeOutPosition();
 
     void getTwobodyData(const ParticleData &p1, const ParticleData &p2);
 
     void getFourbodyData(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
                          const ParticleData &n2);
-
-
 } ParticleData;
 
 typedef struct RapidityRange {
     double min, max;
 } RapidityRange;
+using RapidityMap = std::map<std::string, RapidityRange>;
+
+using ptArray = std::map<std::string, std::vector<double>>;
+
+typedef struct BatchData {
+    std::vector<ParticleData> particles;
+    int eventCount;
+} BatchData;
+using BatchMap = std::map<int, BatchData>;
 
 typedef struct EventData {
     int eventID;

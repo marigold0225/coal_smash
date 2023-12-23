@@ -49,13 +49,13 @@ double calculateParticleRapidity(const double p0, const double pz) {
     const double rap = 0.5 * log((p0 + pz) / (p0 - pz));
     return rap;
 }
-void updateMomentumArray(double pt, double probability, double d_pt, double rap,
+void updateMomentumArray(double pt, double probability, double d_pt, int ptBins, double rap,
                          std::map<std::string, std::vector<double>> &pt_array,
                          const std::map<std::string, RapidityRange> &rapidityRange) {
     for (auto &[label, range]: rapidityRange) {
         if (rap >= range.min && rap < range.max) {
             int npt = static_cast<int>(pt / d_pt);
-            if (npt < pt_array[label].size()) {
+            if (npt < ptBins) {
                 pt_array[label][npt] += probability;
             }
         }
@@ -208,4 +208,12 @@ void calculateProtonPt(const std::string &protonFileName, const std::string &ptF
         output << std::endl;
     }
     output.close();
+}
+RapidityMap defineRapidityRange() {
+    RapidityMap rapidityRanges = {{"-0.1<y<0.0", {-0.1, 0.0}},   {"-0.2<y<-0.1", {-0.2, -0.1}},
+                                  {"-0.3<y<-0.2", {-0.3, -0.2}}, {"-0.4<y<-0.3", {-0.4, -0.3}},
+                                  {"-0.5<y<-0.4", {-0.5, -0.4}}, {"-0.6<y<-0.5", {-0.6, -0.5}},
+                                  {"-0.7<y<-0.6", {-0.7, -0.6}}, {"-0.8<y<-0.7", {-0.8, -0.7}},
+                                  {"-0.9<y<-0.8", {-0.9, -0.8}}, {"-1.0<y<-0.9", {-1.0, -0.9}}};
+    return rapidityRanges;
 }

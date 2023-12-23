@@ -9,11 +9,6 @@
 #include <fstream>
 #include <vector>
 
-typedef struct BatchData {
-    std::vector<ParticleData> particles;
-    int eventCount;
-} BatchData;
-using BatchMap = std::map<int, BatchData>;
 
 void checkAndCreateDataOutputDir(const std::string &outputDir);
 
@@ -50,7 +45,7 @@ bool checkFileExists(const std::string &filename, std::vector<std::string> &labe
 
 void readBatchNuclei(const std::string &filename, int batchSize, BatchMap &batch_nuclei);
 
-void readBatchDeutrons(const std::string &filename, std::vector<BatchData> &batche_deutron);
+void readBatchDeutrons(const std::string &filename, BatchMap &batch_deutrons);
 
 void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,
                                 const std::string &protonFileName,

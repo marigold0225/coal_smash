@@ -138,12 +138,6 @@ void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,
                 std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
                 for (auto &particle: particles) {
                     writeNucleiData(particle, outputFile);
-                    //                    particle.getFreezeOutPosition();
-                    //                    std::ofstream &outputFile = (pdgCode == 2212) ? protonFile : neutronFile;
-                    //                    outputFile << std::fixed << particle.t << " " << particle.x << " " << particle.y
-                    //                               << " " << particle.z << " " << particle.px << " " << particle.py
-                    //                               << " " << particle.pz << " " << particle.p0 << " " << particle.mass
-                    //                               << " " << particle.freeze_out_time << "\n";
                 }
             }
         }
@@ -151,7 +145,7 @@ void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,
     protonFile.close();
     neutronFile.close();
 }
-void readBatchDeutrons(const std::string &filename, std::vector<BatchData> &batche_deutron) {
+void readBatchDeutrons(const std::string &filename, BatchMap &batch_deutrons) {
     std::ifstream file(filename);
     std::string line;
     ParticleData particle;
@@ -159,10 +153,16 @@ void readBatchDeutrons(const std::string &filename, std::vector<BatchData> &batc
     BatchData currentBatch;
 
     while (std::getline(file, line)) {
+        if (line.find("Number of events:") != std::string::npos) {
+            std::istringstream iss(line.substr(line.find(':') + 1));
+            int eventCount;
+            iss >> eventCount;
+            currentBatch.eventCount = eventCount;
+            continue;
+        }
         if (line.find("t x y z px py pz p0 mass probability") != std::string::npos) {
             if (!currentBatch.particles.empty()) {
-                currentBatch.eventCount = currentBatchNumber;
-                batche_deutron.push_back(currentBatch);
+                batch_deutrons[currentBatchNumber] = currentBatch;
                 currentBatch.particles.clear();
                 currentBatchNumber++;
             }
@@ -177,8 +177,7 @@ void readBatchDeutrons(const std::string &filename, std::vector<BatchData> &batc
         }
     }
     if (!currentBatch.particles.empty()) {
-        currentBatch.eventCount = currentBatchNumber;
-        batche_deutron.push_back(currentBatch);
+        batch_deutrons[currentBatchNumber] = currentBatch;
     }
 }
 
@@ -277,11 +276,6 @@ void writeParticlesByCentrality(std::map<int, EventData> &allEvents,
                 outputFile << header;
                 for (auto &particle: particles) {
                     writeNucleiData(particle, outputFile);
-                    //                    particle.getFreezeOutPosition();
-                    //                    outputFile << std::fixed << particle.t << " " << particle.x << " " << particle.y
-                    //                               << " " << particle.z << " " << particle.px << " " << particle.py
-                    //                               << " " << particle.pz << " " << particle.p0 << " " << particle.mass
-                    //                               << " " << particle.freeze_out_time << "\n";
                 }
             }
         }

@@ -3,6 +3,21 @@
 //
 #pragma once
 #include "config_parser.h"
+typedef struct reactionConfig {
+    double dpt;
+    int ptBins;
+    double rap_cut_nucl;
+    double rap_cut_coal;
+    double rms;
+} reactionConfig;
+
+typedef struct coalSwitch {
+    bool rac_deuteron;
+    bool rac_tritium;
+    bool rac_helium4;
+    bool rac_Be;
+} coalSwitch;
+
 typedef struct config_input {
     std::string calculation_mode;
     int mix_events;
@@ -15,18 +30,12 @@ typedef struct config_input {
     double cut_dr;
     double cut_dp;
     //deutron
-    double d_mix_dpt;
-    double d_rap_cut_nucl;
-    double d_rap_cut_coal;
-    double rms;
-    //alpha
-    double alpha_mix_dpt;
-    double alpha_rap_cut_nucl;
-    double alpha_rap_cut_coal;
-    double alpha_rms;
-    // reaction rates
-    bool rac_deuteron;
-    bool rac_tritium;
-    bool rac_helium4;
+    reactionConfig deuteron;
+    reactionConfig alpha;
+    reactionConfig Be;
+    coalSwitch coalescenceSwitch;
+
 } config_in;
 void initializeConfigFromParser(config_in &config, const config_parser &read_config_parser);
+
+config_in readAndParseConfig(const std::string &filename);

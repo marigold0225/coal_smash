@@ -19,4 +19,9 @@ add_executable(coal_smash
         include/coal_alpha.h
         src/coal_alpha.cpp
         include/general_function.h
-        src/general_function.cpp)
+        src/general_function.cpp
+        include/coal_Be.h
+        src/coal_Be.cpp
+        include/run.h
+        src/run.cpp
+)

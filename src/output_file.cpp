@@ -9,7 +9,8 @@ void writeNucleiData(ParticleData &nuclei, std::ofstream &outputFile) {
                << nuclei.px << " " << nuclei.py << " " << nuclei.pz << " " << nuclei.p0 << " "
                << nuclei.mass << " " << nuclei.freeze_out_time << "\n";
 }
-void outputCluster(const std::vector<ParticleData> &clusters, std::ofstream &output) {
+void outputCluster(const std::vector<ParticleData> &clusters, int events, std::ofstream &output) {
+    output << "Number of events: " << events << "\n";
     output << "t x y z px py pz p0 mass probability\n";
     for (const auto &cluster: clusters) {
         output << cluster.freeze_out_time << " " << cluster.x << " " << cluster.y << " "
@@ -20,8 +21,8 @@ void outputCluster(const std::vector<ParticleData> &clusters, std::ofstream &out
 
 
 void outputPt(std::map<std::string, std::vector<double>> &pt_array,
-              std::map<std::string, double> clusterCountByRapidity, double d_pt, int ptBins,
-              const std::string &filename, int total_batch) {
+              std::map<std::string, double> clusterCountByRapidity,
+              const reactionConfig &clusterConfig, const std::string &filename, int total_batch) {
     std::ofstream output_file(filename, std::ios::out);
     if (!output_file.is_open()) {
         throw std::runtime_error("Could not open file " + filename);
@@ -30,8 +31,8 @@ void outputPt(std::map<std::string, std::vector<double>> &pt_array,
         output_file << "Rapidity range: " << label
                     << ", cluster yield: " << clusterCountByRapidity[label] / total_batch
                     << std::endl;
-        for (size_t i = 0; i < ptBins; ++i) {
-            double pt = d_pt / 2 + static_cast<double>(i) * d_pt;
+        for (size_t i = 0; i < clusterConfig.ptBins; ++i) {
+            double pt = clusterConfig.dpt / 2 + static_cast<double>(i) * clusterConfig.dpt;
             pts[i] /= total_batch;
             output_file << pt << "\t" << pts[i] << std::endl;
         }

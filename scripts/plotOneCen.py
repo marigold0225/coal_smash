@@ -10,14 +10,20 @@ matplotlib.rcParams['xtick.labelsize'] = 20
 matplotlib.rcParams['ytick.labelsize'] = 20
 
 dy = 0.1
-
+# experimental data path
+p = '../tem/p.csv'
+p1 = '../tem/p1.csv'
+d = '../tem/deutron.csv'
+d1 = '../tem/deutron1.csv'
+he4 = '../tem/he4.csv'
+he41 = '../tem/he41.csv'
 # x and limit
 p_xlim = [0.2, 2.5]
 p_ylim = [10 ** (-15), 100]
 d_xlim = [0, 4.2]
-d_ylim = [10 ** (-16), 10]
-he4_xlim = [0.4, 4.2]
-he4_ylim = [10 ** (-17), 1]
+d_ylim = [10 ** (-7), 10]
+he4_xlim = [0.4, 5.2]
+he4_ylim = [10 ** (-8), 1]
 
 
 # experimental data
@@ -53,41 +59,36 @@ def read_and_plot_pt(ax, filepath, scale_factors, markers):
         rapidity_data = np.array(rapidity_data)
         x = rapidity_data[:, 0]
         y = rapidity_data[:, 1] / dy * scale
-        ax.plot(x, y, marker=marker, linestyle='-', label=rapidity_ranges[i], markersize=8)
+        # ax.plot(x, y, marker=marker, linestyle='-', label=rapidity_ranges[i], markersize=8)
+        ax.scatter(x, y, marker=marker, linestyle='-', label=rapidity_ranges[i], s=20)
 
 
 # Define the scale factors and markers for each rapidity range
-rapidity_range = ["-0.1<y<0.0", "-0.2<y<-0.1", "-0.3<y<-0.2", "-0.4<y<-0.3", "-0.5<y<-0.4",
-                  "-0.6<y<-0.5", "-0.7<y<-0.6", "-0.8<y<-0.7", "-0.9<y<-0.8", "-1.0<y<-0.9"]
+rapidity_range = ["-0.1<y<0.0", "-0.2<y<-0.1"]
 scale_factors = [10 ** (-i) for i in range(len(rapidity_range))]
-markers = ['o', 's', 'D', '^', 'v', '<', '>', 'p', '*', 'h']
+markers = ['o', 's', 'D', '^', 'v']
 
-# Define the centrality ranges
-centrality_ranges = ["0-10", "10-20", "20-40", "40-80"]
-# Create the subplot
-fig, axs = plt.subplots(1, len(centrality_ranges), figsize=(20, 6), sharey=True)
-fig.suptitle(r'Au+Au @ FXT $\sqrt{s_{NN}}=3$ GeV :alpha', fontsize=22)
+centrality_ranges = ["0-10"]
 
-# Plot the data for each centrality
-for i, centrality in enumerate(centrality_ranges):
-    filename = f'../data/50000/{centrality}/alpha_pt_{centrality}.dat'
-    read_and_plot_pt(axs[i], filename, scale_factors, markers)
+fig, ax = plt.subplots(figsize=(10, 6))  # 注意这里使用了ax而不是axs
+fig.suptitle(r'Au+Au @ FXT $\sqrt{s_{NN}}=3$ GeV :he4', fontsize=22)
 
-    axs[i].set_title(f'{centrality}%', fontsize=20)
-    axs[i].set_xlabel('Pt (GeV/c)', fontsize=22)
-    axs[i].set_yscale('log')
-    axs[i].set_xlim(he4_xlim)
-    axs[i].set_ylim(he4_ylim)
-    axs[i].grid(True)
+centrality = centrality_ranges[0]
+filename = f'../data/1000/{centrality}/d_pt_{centrality}.dat'  ##p_pt , alpha_pt, d_pt
+read_and_plot_pt(ax, filename, scale_factors, markers)
 
-    if i == 0:
-        axs[i].set_ylabel(r'$d^2N/(2\pi p_T dy dp_t)[(GeV/c)^{-2}]$', fontsize=22)
+ax.set_title(f'{centrality}%', fontsize=20)
+ax.set_xlabel('Pt (GeV/c)', fontsize=22)
+ax.set_yscale('log')
+ax.set_xlim(d_xlim)
+ax.set_ylim(d_ylim)
+ax.grid(True)
+ax.set_ylabel(r'$d^2N/(2\pi p_T dy dp_t)[(GeV/c)^{-2}]$', fontsize=22)
 
-    # exp_data
-    # plot_exp_data(axs[i], '../tem/he4.csv', marker='x', color='r')
-    # plot_exp_data(axs[i], '../tem/he41.csv', marker='x', color='b')
+# 绘制实验数据
+plot_exp_data(ax, d, marker='x', color='r')
+plot_exp_data(ax, d1, marker='x', color='b')
 
-# Adjust the layout and add a legend to the last subplot
-axs[-1].legend(loc='upper right')
-plt.subplots_adjust(wspace=0, hspace=0)
+# 添加图例
+ax.legend(loc='upper right')
 plt.show()

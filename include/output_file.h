@@ -3,16 +3,17 @@
 //
 #pragma once
 #include "particle.h"
+#include "read_config.h"
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <istream>
 
-void outputCluster(const std::vector<ParticleData> &clusters, std::ofstream &output);
+void outputCluster(const std::vector<ParticleData> &clusters, int events, std::ofstream &output);
 
 
 void writeNucleiData(ParticleData &nuclei, std::ofstream &outputFile);
 
 void outputPt(std::map<std::string, std::vector<double>> &pt_array,
-              std::map<std::string, double> clusterCountByRapidity, double d_pt, int ptBins,
-              const std::string &filename, int total_batch);
+              std::map<std::string, double> clusterCountByRapidity,
+              const reactionConfig &clusterConfig, const std::string &filename, int total_batch);
