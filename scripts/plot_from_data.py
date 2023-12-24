@@ -1,72 +1,115 @@
-import math
-
 import matplotlib.pyplot as plt
 import numpy as np
 
-protonFileName = '../data/50000/0-10/Be_0-10.dat'
+
+# Set global Matplotlib parameters
+def set_matplotlib_params():
+    plt.rcParams.update({
+        'font.family': 'Times New Roman',
+        'xtick.direction': 'in',
+        'ytick.direction': 'in',
+        'xtick.labelsize': 20,
+        'ytick.labelsize': 20
+    })
 
 
-def calculate_rapidity(p0, pz):
-    return 0.5 * math.log((p0 + pz) / (p0 - pz))
+# Define particle configuration
+particle_configs = {
+    'p': {
+        'xlim': [0.2, 2.5],
+        'ylim': [10 ** (-7), 100],
+        'file_prefix': 'p_pt_',
+        'file_exp': '../tem/p.dat',
+        'label': r'Proton',
+    },
+    'd': {
+        'xlim': [0, 4.2],
+        'ylim': [10 ** (-12), 10],
+        'file_prefix': 'd3_pt_',
+        'file_exp': '../tem/d.dat',
+        'label': r'Deutron',
+    },
+    'he4': {
+        'xlim': [0.4, 5.2],
+        'ylim': [10 ** (-12), 1],
+        'file_prefix': 'alpha3_pt_',
+        'file_exp': '../tem/he4.dat',
+        'label': r'$^4$He',
+    },
+    'be': {
+        'xlim': [0.4, 5.2],
+        'ylim': [10 ** (-13), 10 ** (-4)],
+        'file_prefix': 'Be3_pt_',
+        'file_exp': '../tem/be.dat',
+        'label': r'$^8$Be',
+    },
+    # Add more particles as needed
+}
 
 
-# 解析快度区间字符串
-rapidity_range_strings = [
-    "-0.1<y<0.0", "-0.2<y<-0.1", "-0.3<y<-0.2", "-0.4<y<-0.3", "-0.5<y<-0.4",
-    "-0.6<y<-0.5", "-0.7<y<-0.6", "-0.8<y<-0.7", "-0.9<y<-0.8", "-1.0<y<-0.9"
-]
+# Read and plot particle data
+def read_and_plot_particle(ax, centrality, particle_type, scale_factors, markers):
+    config = particle_configs[particle_type]
+    filepath = f'../data/50000/{centrality}/{config["file_prefix"]}{centrality}.dat'
+    dy = 0.1  # Define dy if it's constant or pass it as a parameter
 
-rapidity_ranges = {}
-for range_string in rapidity_range_strings:
-    parts = range_string.split('<y<')
-    min_y, max_y = map(float, parts)
-    rapidity_ranges[range_string] = (min_y, max_y)
+    with open(filepath, 'r') as file:
+        lines = file.readlines()
 
-# 初始化存储结构
-ptBins = 10
-d_pt = 0.2
-protonPtsByRapidity = {label: np.zeros(ptBins) for label in rapidity_ranges}
-protonCountsByRapidity = {label: 0 for label in rapidity_ranges}
-total_events = 0
+    rapidity_ranges = []
+    data = []
 
-# 读取并处理数据文件
-with open(protonFileName, 'r') as file:
-    lines = file.readlines()
-    i = 0
-    while i < len(lines):
-        line = lines[i].strip()
+    for line in lines:
+        if line.startswith("Rapidity range:"):
+            rapidity_values = line.split(", ")[1].split(":")[1]
+            print(rapidity_values)
+            if rapidity_values != 0:
+                rapidity_ranges.append(line.strip().split(": ")[1])
+                data.append([])
+        elif line.strip():
+            pt, density = map(float, line.split())
+            data[-1].append([pt, density])
 
-        if line.startswith('Number of events'):
-            num_events = int(line.split(': ')[1])
-            i += 2  # 跳过标题行
+    for i, rapidity_data in enumerate(data):
+        rapidity_data = np.array(rapidity_data)
+        x = rapidity_data[:, 0]
+        y = rapidity_data[:, 1] / dy * scale_factors[i]
+        ax.plot(x, y, marker=markers[i], linestyle='-', label=rapidity_ranges[i], markersize=8)
 
-            for j in range(num_events):
-                data = lines[i + j].strip().split()
-                px, py, pz, p0 = map(float, data[4:8])
-                pt = math.sqrt(px ** 2 + py ** 2)
-                rapidity = calculate_rapidity(p0, pz)
+    ax.set_title(f'{centrality}%-{config["label"]}', fontsize=20)
+    ax.set_xlabel('Pt (GeV/c)', fontsize=22)
+    ax.set_yscale('log')
+    ax.set_xlim(config['xlim'])
+    ax.set_ylim(config['ylim'])
+    ax.grid(True)
 
-                for label, (min_y, max_y) in rapidity_ranges.items():
-                    if min_y < rapidity < max_y:
-                        npt = int(pt / d_pt)
-                        if npt < ptBins:
-                            protonPtsByRapidity[label][npt] += 1 / num_events ** 8
-                        protonCountsByRapidity[label] += 1
-                        break
 
-            total_events += num_events
-            i += num_events
-        else:
-            i += 1
+# Main plotting routine
+def main():
+    set_matplotlib_params()
+    rapidity_range = ["-0.1<y<0.0", "-0.2<y<-0.1", "-0.3<y<-0.2", "-0.4<y<-0.3", "-0.5<y<-0.4"
+        , "-0.6<y<-0.5", "-0.7<y<-0.6", "-0.8<y<-0.7", "-0.9<y<-0.8", "-1.0<y<-0.9"]
+    scale_factors = [10 ** (-i) for i in range(len(rapidity_range))]
+    markers = ['o', 's', 'D', '^', 'v'
+        , '<', '>', 'p', '*', 'h']
 
-# 绘图
-plt.figure(figsize=(12, 8))
-for label, pts in protonPtsByRapidity.items():
-    normalized_pts = [pt / (2 * math.pi * (i * d_pt + d_pt / 2) * d_pt * total_events) for i, pt in enumerate(pts)]
-    plt.plot([(i * d_pt + d_pt / 2) for i in range(ptBins)], normalized_pts, label=f'{label}')
-plt.title('Normalized Proton $p_T$ Distribution by Rapidity')
-plt.xlabel('$p_T$ (GeV/c)')
-plt.ylabel('Normalized Yield')
-plt.legend()
-plt.grid(True)
-plt.show()
+    # Define the centrality ranges
+    centrality_ranges = ["0-10", "10-20", "20-40", "40-80"]
+    fig, axs = plt.subplots(1, len(centrality_ranges), figsize=(20, 6), sharey=True)
+    fig.suptitle(r'Au+Au @ FXT $\sqrt{s_{NN}}=3$ GeV', fontsize=22)
+
+    # Plot the data for each centrality
+    for i, centrality in enumerate(centrality_ranges):
+        read_and_plot_particle(axs[i], centrality, 'd', scale_factors, markers)  # Change 'd' to desired particle key
+
+        if i == 0:
+            axs[i].set_ylabel(r'$d^2N/(2\pi p_T dy dp_t)[(GeV/c)^{-2}]$', fontsize=22)
+
+    # Adjust layout and show
+    axs[-1].legend(loc='upper right')
+    plt.subplots_adjust(wspace=0, hspace=0)
+    plt.show()
+
+
+if __name__ == '__main__':
+    main()

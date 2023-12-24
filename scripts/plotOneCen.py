@@ -1,94 +1,102 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-
-matplotlib.rcParams['font.family'] = 'Times New Roman'
-matplotlib.rcParams['xtick.direction'] = 'in'
-matplotlib.rcParams['ytick.direction'] = 'in'
-matplotlib.rcParams['xtick.labelsize'] = 20
-matplotlib.rcParams['ytick.labelsize'] = 20
-
-dy = 0.1
-# experimental data path
-p = '../tem/p.csv'
-p1 = '../tem/p1.csv'
-d = '../tem/deutron.csv'
-d1 = '../tem/deutron1.csv'
-he4 = '../tem/he4.csv'
-he41 = '../tem/he41.csv'
-# x and limit
-p_xlim = [0.2, 2.5]
-p_ylim = [10 ** (-15), 100]
-d_xlim = [0, 4.2]
-d_ylim = [10 ** (-7), 10]
-he4_xlim = [0.4, 5.2]
-he4_ylim = [10 ** (-8), 1]
 
 
-# experimental data
-def plot_exp_data(ax_in, filepath, marker='x', color='r'):
-    data = pd.read_csv(filepath, header=None)
-    data.columns = ['pt', 'density']
-    x = data['pt'].values
-    y = data['density'].values
-    ax_in.plot(x, y, marker=marker, linestyle='', markersize=8, color=color, label='exp data')
+def set_matplotlib_params():
+    matplotlib.rcParams['font.family'] = 'Times New Roman'
+    matplotlib.rcParams['xtick.direction'] = 'in'
+    matplotlib.rcParams['ytick.direction'] = 'in'
+    matplotlib.rcParams['xtick.labelsize'] = 20
+    matplotlib.rcParams['ytick.labelsize'] = 20
 
 
-def read_and_plot_pt(ax, filepath, scale_factors, markers):
-    # Open the file and read the lines
+def read_and_plot_pt(ax, filepath, scale_factor, mark, color_in, exp, dy):
     with open(filepath, 'r') as file:
         lines = file.readlines()
 
     rapidity_ranges = []
     data = []
 
-    # Process the file
     for line in lines:
         if line.startswith("Rapidity range:"):
-            # If a new rapidity range is found, reset the data list and store the range
-            rapidity_ranges.append(line.strip().split(": ")[1])
+            range_parts = line.split(",")[0].split(":")[1]
+            rapidity_ranges.append(range_parts)
             data.append([])
         elif line.strip():
-            # If it's a data line, append the data to the last rapidity range's list
             pt, density = map(float, line.split())
             data[-1].append([pt, density])
 
-    # Plot the data
-    for i, (rapidity_data, scale, marker) in enumerate(zip(data, scale_factors, markers)):
+    for i, (rapidity_data, scale, marker, c) in enumerate(zip(data, scale_factor, mark, color_in)):
         rapidity_data = np.array(rapidity_data)
-        x = rapidity_data[:, 0]
-        y = rapidity_data[:, 1] / dy * scale
-        # ax.plot(x, y, marker=marker, linestyle='-', label=rapidity_ranges[i], markersize=8)
-        ax.scatter(x, y, marker=marker, linestyle='-', label=rapidity_ranges[i], s=20)
+        if exp:
+            x = rapidity_data[:, 0]
+            y = rapidity_data[:, 1] / dy * scale
+            ax.plot(x, y, marker=marker, linestyle='--', markersize=8, color=c)
+        else:
+            x = rapidity_data[:, 0]
+            y = rapidity_data[:, 1] / dy * scale
+            ax.plot(x, y, marker=marker, linestyle='-', label=rapidity_ranges[i], markersize=8, color=c)
 
 
-# Define the scale factors and markers for each rapidity range
-rapidity_range = ["-0.1<y<0.0", "-0.2<y<-0.1"]
-scale_factors = [10 ** (-i) for i in range(len(rapidity_range))]
-markers = ['o', 's', 'D', '^', 'v']
+# Define particle configuration
+particle_configs = {
+    'p': {
+        'xlim': [0.2, 2.5],
+        'ylim': [10 ** (-7), 100],
+        'file_prefix': 'p_pt_',
+        'file_exp': '../tem/p.dat',
+        'label': r'Proton',
+    },
+    'd': {
+        'xlim': [0, 4.2],
+        'ylim': [10 ** (-9), 10],
+        'file_prefix': 'd3_pt_',
+        'file_exp': '../tem/d.dat',
+        'label': r'Deutron',
+    },
+    'he4': {
+        'xlim': [0.4, 5.2],
+        'ylim': [10 ** (-10), 1],
+        'file_prefix': 'alpha3_pt_',
+        'file_exp': '../tem/he4.dat',
+        'label': r'$^4$He',
+    },
+    'be': {
+        'xlim': [0.4, 5.2],
+        'ylim': [10 ** (-13), 10 ** (-4)],
+        'file_prefix': 'Be3_pt_',
+        'file_exp': '../tem/be.dat',
+        'label': r'$^8$Be',
+    },
+}
 
-centrality_ranges = ["0-10"]
 
-fig, ax = plt.subplots(figsize=(10, 6))  # 注意这里使用了ax而不是axs
-fig.suptitle(r'Au+Au @ FXT $\sqrt{s_{NN}}=3$ GeV :he4', fontsize=22)
+def plot_particle(ax, particle_type, centrality, scale_factors, markers, colors):
+    config = particle_configs[particle_type]
+    filedata = f'../data/50000/{centrality}/{config["file_prefix"]}{centrality}.dat'
+    read_and_plot_pt(ax, filedata, scale_factors, markers, colors, False, dy=0.1)
+    # filedata_exp = f'{config["file_exp"]}'
+    # scale_factor_exp = [1, 1, 1, 1, 1]
+    # markers_exp = ['x', 'x', 'x', 'x', 'x']
+    # read_and_plot_pt(ax, filedata_exp, scale_factor_exp, markers_exp, colors, True, dy=1)
+    ax.set_title(f'{centrality}%-{config["label"]}', fontsize=20)
+    ax.set_xlabel('Pt (GeV/c)', fontsize=22)
+    ax.set_yscale('log')
+    ax.set_xlim(config['xlim'])
+    ax.set_ylim(config['ylim'])
+    ax.grid(True)
+    ax.set_ylabel(r'$d^2N/(2\pi p_T dy dp_t)[(GeV/c)^{-2}]$', fontsize=22)
+    ax.legend(loc='upper right')
 
-centrality = centrality_ranges[0]
-filename = f'../data/50000/{centrality}/Be_pt_{centrality}.dat'  ##p_pt , alpha_pt, d_pt
-read_and_plot_pt(ax, filename, scale_factors, markers)
 
-ax.set_title(f'{centrality}%', fontsize=20)
-ax.set_xlabel('Pt (GeV/c)', fontsize=22)
-ax.set_yscale('log')
-# ax.set_xlim(d_xlim)
-# ax.set_ylim(d_ylim)
-ax.grid(True)
-ax.set_ylabel(r'$d^2N/(2\pi p_T dy dp_t)[(GeV/c)^{-2}]$', fontsize=22)
+def main():
+    set_matplotlib_params()
+    fig, ax = plt.subplots(figsize=(10, 6))  # particle type: p, d, he4, be
+    plot_particle(ax, 'he4', '0-10', scale_factors=[10 ** (-i) for i in range(5)],
+                  markers=['o', 's', 'D', '^', 'v'], colors=['k', 'r', 'b', 'm', 'c'])
+    plt.show()
 
-# 绘制实验数据
-# plot_exp_data(ax, d, marker='x', color='r')
-# plot_exp_data(ax, d1, marker='x', color='b')
 
-# 添加图例
-ax.legend(loc='upper right')
-plt.show()
+if __name__ == '__main__':
+    main()

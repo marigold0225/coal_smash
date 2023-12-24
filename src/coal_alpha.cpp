@@ -9,7 +9,8 @@
 
 ParticleData dDToAlpha(const ParticleData &d1, const ParticleData &d2,
                        const reactionConfig &alphaConfig, ptArray &pt_array,
-                       const RapidityMap &rapidityRange) {
+                       const RapidityMap &rapidityRange,
+                       std::map<std::string, double> &clusterCountByRapidity) {
     int cut_dr      = 5;
     int cut_dp      = 5;
     double rms      = alphaConfig.rms;
@@ -55,22 +56,24 @@ ParticleData dDToAlpha(const ParticleData &d1, const ParticleData &d2,
     }
     alpha.probability = 1.0 / 4 * 8 *
                         exp(-diff_dr * diff_dr / sig / sig - diff_dp * diff_dp * sig * sig / hbar2);
-    updateMomentumArray(alpha, alphaConfig, pt_array, rapidityRange, <#initializer #>);
+    updateMomentumArray(alpha, alphaConfig, pt_array, rapidityRange, clusterCountByRapidity);
     return alpha;
 }
-
 
 void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
                            const reactionConfig &alphaConfig, ptArray &pt_array,
                            const RapidityMap &rapidityRange, double &batch_alpha, int mixEvents,
-                           std::vector<ParticleData> &alpha) {
+                           std::vector<ParticleData> &alpha,
+                           std::map<std::string, double> &clusterCountByRapidity) {
     alpha.clear();
     batch_alpha = 0.0;
     int ptBins  = alphaConfig.ptBins;
     double d_pt = alphaConfig.dpt;
-    std::map<std::string, std::vector<double>> batch_pt_array;
+    ptArray batch_pt_array;
+    std::map<std::string, double> alphaCountByRapidity;
     for (auto &[label, _]: rapidityRange) {
-        batch_pt_array[label] = std::vector<double>(ptBins, 0.0);
+        batch_pt_array[label]       = std::vector<double>(ptBins, 0.0);
+        alphaCountByRapidity[label] = 0.0;
     }
 
     std::vector<std::pair<ParticleData, double>> potential_alpha;
@@ -79,7 +82,8 @@ void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
     for (size_t i = 0; i < deutrons.size(); i++) {
         for (size_t j = i + 1; j < deutrons.size(); j++) {
             ParticleData alpha_particle =
-                    dDToAlpha(deutrons[i], deutrons[j], alphaConfig, batch_pt_array, rapidityRange);
+                    dDToAlpha(deutrons[i], deutrons[j], alphaConfig, batch_pt_array, rapidityRange,
+                              alphaCountByRapidity);
             if (alpha_particle.probability > 0) {
                 potential_alpha.emplace_back(alpha_particle, alpha_particle.probability);
                 batch_alpha += alpha_particle.probability;
@@ -98,6 +102,9 @@ void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
                 pt_array[label][k] += pts[k];
             }
         }
+    }
+    for (auto &[label, count]: alphaCountByRapidity) {
+        clusterCountByRapidity[label] += count / mixEvents;
     }
 }
 void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string &alphaFile,
@@ -126,7 +133,7 @@ void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string 
         double batch_number_alpha = 0.0;
         std::vector<ParticleData> batch_alpha;
         processAlphaOneBatch2(deutrons, alphaConfig, pt_array, rapidityRange, batch_number_alpha,
-                              mixEvents, batch_alpha);
+                              mixEvents, batch_alpha, clusterCountByRapidity);
         total_alpha += batch_number_alpha / mixEvents;
         total_batches++;
         if (alphaFileOut.is_open()) {
@@ -134,15 +141,15 @@ void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string 
         }
         std::cout << "Average number of alpha per batch (Batch " << batchNumber
                   << "): " << batch_number_alpha / mixEvents << std::endl;
-        for (const auto &alpha: batch_alpha) {
-            double rapidity = alpha.getRapidity();
-            for (const auto &[label, range]: rapidityRange) {
-                if (rapidity >= range.min && rapidity < range.max) {
-                    clusterCountByRapidity[label] += 1.0 / static_cast<double>(mixEvents);
-                    break;
-                }
-            }
-        }
+        //        for (const auto &alpha: batch_alpha) {
+        //            double rapidity = alpha.getRapidity();
+        //            for (const auto &[label, range]: rapidityRange) {
+        //                if (rapidity >= range.min && rapidity < range.max) {
+        //                    clusterCountByRapidity[label] += 1.0 / static_cast<double>(mixEvents);
+        //                    break;
+        //                }
+        //            }
+        //        }
     }
 
     alphaFileOut.close();
@@ -154,7 +161,8 @@ void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string 
 
 ParticleData pPNNToAlpha(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
                          const ParticleData &n2, const config_in &config_input, ptArray &pt_array,
-                         const RapidityMap &rapidityRange) {
+                         const RapidityMap &rapidityRange,
+                         std::map<std::string, double> clusterCount) {
     double sig1                  = config_input.alpha.rms;
     double sig2                  = config_input.alpha.rms;
     double sig3                  = config_input.alpha.rms;
@@ -224,8 +232,7 @@ ParticleData pPNNToAlpha(const ParticleData &p1, const ParticleData &p2, const P
     }
     alpha_particle.getFourbodyData(boost_p1, boost_p2, boost_n1, boost_n2);
     ParticleData alpha_particle_boost = alpha_particle.lorentzBoost(-beta_x, -beta_y, -beta_z);
-    updateMomentumArray(alpha_particle, config_input.alpha, pt_array, rapidityRange,
-                        <#initializer #>);
+    updateMomentumArray(alpha_particle, config_input.alpha, pt_array, rapidityRange, clusterCount);
     return alpha_particle_boost;
 }
 
@@ -233,11 +240,18 @@ ParticleData pPNNToAlpha(const ParticleData &p1, const ParticleData &p2, const P
 void processAlphaOneBatch4(const std::vector<ParticleData> &protons,
                            const std::vector<ParticleData> &neutrons, const config_in &config_input,
                            ptArray &pt_array, const RapidityMap &rapidityRang, double &batch_alpha,
-                           int eventsInBatch, std::vector<ParticleData> &alpha) {
+                           int eventsInBatch, std::vector<ParticleData> &alpha,
+                           std::map<std::string, double> clusterCount) {
     alpha.clear();
     batch_alpha = 0.0;
     int ptBins  = 10;
     double d_pt = config_input.alpha.dpt;
+    ptArray batch_pt_array;
+    std::map<std::string, double> clusterCountOneBatch;
+    for (auto &[label, _]: rapidityRang) {
+        batch_pt_array[label]       = std::vector<double>(ptBins, 0.0);
+        clusterCountOneBatch[label] = 0.0;
+    }
 
     std::vector<ParticleData> protons_fraction, neutrons_fraction;
     double factor = samplingAndScalingFactor(protons, neutrons, protons_fraction, neutrons_fraction,
@@ -251,9 +265,10 @@ void processAlphaOneBatch4(const std::vector<ParticleData> &protons,
         for (size_t j = i + 1; j < protons_fraction.size(); j++) {
             for (size_t k = 0; k < neutrons_fraction.size(); k++) {
                 for (size_t l = k + 1; l < neutrons_fraction.size(); l++) {
-                    ParticleData alpha_particle = pPNNToAlpha(
-                            protons_fraction[i], protons_fraction[j], neutrons_fraction[k],
-                            neutrons_fraction[l], config_input, pt_array, rapidityRang);
+                    ParticleData alpha_particle =
+                            pPNNToAlpha(protons_fraction[i], protons_fraction[j],
+                                        neutrons_fraction[k], neutrons_fraction[l], config_input,
+                                        batch_pt_array, rapidityRang, clusterCountOneBatch);
                     if (alpha_particle.probability > 0) {
                         //                     potential_alpha.emplace_back(alpha_particle, alpha_particle.probability);
                         batch_alpha += alpha_particle.probability * factor;
@@ -265,15 +280,20 @@ void processAlphaOneBatch4(const std::vector<ParticleData> &protons,
     }
     //    weightedSampling(alpha, potential_alpha, cumulated_probabilities, batch_alpha);
 
-    for (auto &[label, pts]: pt_array) {
+    for (auto &[label, pts]: batch_pt_array) {
         for (size_t k = 0; k < ptBins; ++k) {
             double pt = d_pt / 2 + static_cast<double>(k) * d_pt;
             if (pt > 0) {
                 pts[k] = pts[k] / (2 * M_PI * pt * d_pt * mixEvents) * factor;
+                pt_array[label][k] += pts[k];
             }
         }
     }
+    for (auto &[label, count]: clusterCountOneBatch) {
+        clusterCount[label] += count / mixEvents * factor;
+    }
 }
+
 
 void calculateAlphaAllBatch4(const std::string &protonFile, const std::string &neutronFile,
                              const std::string &alphaFile, std::string &ptFile,
@@ -306,7 +326,8 @@ void calculateAlphaAllBatch4(const std::string &protonFile, const std::string &n
             double batch_number_alpha = 0.0;
             std::vector<ParticleData> batch_alpha;
             processAlphaOneBatch4(protons, neutrons, configInput, pt_array, rapidityRang,
-                                  batch_number_alpha, eventsInBatch, batch_alpha);
+                                  batch_number_alpha, eventsInBatch, batch_alpha,
+                                  clusterCountByRapidity);
             total_batch_alpha += batch_number_alpha / eventsInBatch / eventsInBatch /
                                  eventsInBatch / eventsInBatch;
             std::cout << "Batch " << batchNumber << " repetition " << repetition << " alpha: "

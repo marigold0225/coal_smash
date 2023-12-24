@@ -1,7 +1,6 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 matplotlib.rcParams['font.family'] = 'Times New Roman'
 matplotlib.rcParams['xtick.direction'] = 'in'
@@ -21,15 +20,7 @@ he4_ylim = [10 ** (-17), 1]
 
 
 # experimental data
-def plot_exp_data(ax_in, filepath, marker='x', color='r'):
-    data = pd.read_csv(filepath, header=None)
-    data.columns = ['pt', 'density']
-    x = data['pt'].values
-    y = data['density'].values
-    ax_in.plot(x, y, marker=marker, linestyle='', markersize=8, color=color, label='exp data')
-
-
-def read_and_plot_pt(ax, filepath, scale_factors, markers):
+def read_and_plot_pt(ax, filepath, scale_factor, markers_in):
     # Open the file and read the lines
     with open(filepath, 'r') as file:
         lines = file.readlines()
@@ -49,7 +40,7 @@ def read_and_plot_pt(ax, filepath, scale_factors, markers):
             data[-1].append([pt, density])
 
     # Plot the data
-    for i, (rapidity_data, scale, marker) in enumerate(zip(data, scale_factors, markers)):
+    for i, (rapidity_data, scale, marker) in enumerate(zip(data, scale_factor, markers_in)):
         rapidity_data = np.array(rapidity_data)
         x = rapidity_data[:, 0]
         y = rapidity_data[:, 1] / dy * scale
@@ -70,7 +61,7 @@ fig.suptitle(r'Au+Au @ FXT $\sqrt{s_{NN}}=3$ GeV :alpha', fontsize=22)
 
 # Plot the data for each centrality
 for i, centrality in enumerate(centrality_ranges):
-    filename = f'../data/50000/{centrality}/Be0_pt_{centrality}.dat'
+    filename = f'../data/50000/{centrality}/Be_pt_{centrality}.dat'
     read_and_plot_pt(axs[i], filename, scale_factors, markers)
 
     axs[i].set_title(f'{centrality}%', fontsize=20)
@@ -82,10 +73,6 @@ for i, centrality in enumerate(centrality_ranges):
 
     if i == 0:
         axs[i].set_ylabel(r'$d^2N/(2\pi p_T dy dp_t)[(GeV/c)^{-2}]$', fontsize=22)
-
-    # exp_data
-    # plot_exp_data(axs[i], '../tem/he4.csv', marker='x', color='r')
-    # plot_exp_data(axs[i], '../tem/he41.csv', marker='x', color='b')
 
 # Adjust the layout and add a legend to the last subplot
 axs[-1].legend(loc='upper right')

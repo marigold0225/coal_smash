@@ -21,7 +21,7 @@ void handleCentralityCalculations(const std::string &input_particle_filename,
     }
 
     //calculate proton transverse momentum
-    if (!checkFileExists(dataOutputDir, centralityLabels, "d0_pt")) {
+    if (!checkFileExists(dataOutputDir, centralityLabels, "p_pt")) {
         std::cout << "Calculating proton transverse momentum..." << std::endl;
         for (const auto &label: centralityLabels) {
             std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
@@ -32,25 +32,25 @@ void handleCentralityCalculations(const std::string &input_particle_filename,
             std::string dPtFileName      = constructFilename(dataOutputDir, "d0_pt", label);
             std::string bePtFileName     = constructFilename(dataOutputDir, "Be0_pt", label);
             ptArray proton_pt;
-            //            calculateProtonPt(protonFileName, pPtFileName, proton_pt, rapidityRanges);
-            calculateClusterPt(deuteronFileName, dPtFileName, rapidityRanges, config.deuteron);
+            calculateProtonPt(protonFileName, pPtFileName, proton_pt, rapidityRanges);
+            //            calculateClusterPt(deuteronFileName, dPtFileName, rapidityRanges, config.deuteron);
             //            calculateClusterPt(beFileName, bePtFileName, rapidityRanges, config.deuteron);
         }
     } else {
-        std::cout << "proton transverse momentum already exists.." << std::endl;
-        for (const auto &label: centralityLabels) {
-            std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
-            std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
-            std::string alphaFileName    = constructFilename(dataOutputDir, "alpha", label);
-            std::string beFileName       = constructFilename(dataOutputDir, "Be", label);
-            std::string pPtFileName      = constructFilename(dataOutputDir, "p_pt", label);
-            std::string dPtFileName      = constructFilename(dataOutputDir, "d0_pt", label);
-            std::string bePtFileName     = constructFilename(dataOutputDir, "Be0_pt", label);
-            ptArray proton_pt;
-            //            calculateProtonPt(protonFileName, pPtFileName, proton_pt, rapidityRanges);
-            calculateClusterPt(deuteronFileName, dPtFileName, rapidityRanges, config.deuteron);
-            //            calculateClusterPt(beFileName, bePtFileName, rapidityRanges, config.deuteron);
-        }
+        //        std::cout << "proton transverse momentum already exists.." << std::endl;
+        //        for (const auto &label: centralityLabels) {
+        //            std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
+        //            std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
+        //            std::string alphaFileName    = constructFilename(dataOutputDir, "alpha", label);
+        //            std::string beFileName       = constructFilename(dataOutputDir, "Be", label);
+        //            std::string pPtFileName      = constructFilename(dataOutputDir, "p_pt", label);
+        //            std::string dPtFileName      = constructFilename(dataOutputDir, "d0_pt", label);
+        //            std::string bePtFileName     = constructFilename(dataOutputDir, "Be0_pt", label);
+        //            ptArray proton_pt;
+        //            //            calculateProtonPt(protonFileName, pPtFileName, proton_pt, rapidityRanges);
+        //            calculateClusterPt(deuteronFileName, dPtFileName, rapidityRanges, config.deuteron);
+        //            //            calculateClusterPt(beFileName, bePtFileName, rapidityRanges, config.deuteron);
+        //        }
     }
 
     //Deutron calculations
@@ -59,7 +59,7 @@ void handleCentralityCalculations(const std::string &input_particle_filename,
             std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
             std::string neutronFileName  = constructFilename(dataOutputDir, "neutron", label);
             std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
-            std::string ptFileName       = constructFilename(dataOutputDir, "d_pt", label);
+            std::string ptFileName       = constructFilename(dataOutputDir, "d3_pt", label);
             std::cout << "Calculating deutron for centrality " << label << std::endl;
             DeuteronAllBatch(protonFileName, neutronFileName, deuteronFileName, ptFileName, config,
                              rapidityRanges);
@@ -72,7 +72,7 @@ void handleCentralityCalculations(const std::string &input_particle_filename,
             std::string neutronFileName  = constructFilename(dataOutputDir, "neutron", label);
             std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
             std::string alphaFileName    = constructFilename(dataOutputDir, "alpha", label);
-            std::string ptFileName       = constructFilename(dataOutputDir, "alpha_pt", label);
+            std::string ptFileName       = constructFilename(dataOutputDir, "alpha3_pt", label);
             std::cout << "Calculating alpha for centrality " << label << std::endl;
             //                calculateAlphaAllBatch4(protonFileName, neutronFileName, alphaFileName, ptFileName,
             //                                         config, alpha_pt, rapidityRanges);
@@ -84,7 +84,7 @@ void handleCentralityCalculations(const std::string &input_particle_filename,
         for (const auto &label: centralityLabels) {
             std::string alphaFileName = constructFilename(dataOutputDir, "alpha", label);
             std::string beFileName    = constructFilename(dataOutputDir, "Be", label);
-            std::string ptFileName    = constructFilename(dataOutputDir, "Be_pt", label);
+            std::string ptFileName    = constructFilename(dataOutputDir, "Be3_pt", label);
             std::cout << "Calculating Be for centrality " << label << std::endl;
             calculateBeAllBatch(alphaFileName, beFileName, ptFileName, config.Be, rapidityRanges);
         }
