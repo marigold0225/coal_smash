@@ -20,8 +20,7 @@ void outputCluster(const std::vector<ParticleData> &clusters, int events, std::o
 }
 
 
-void outputPt(std::map<std::string, std::vector<double>> &pt_array,
-              std::map<std::string, double> clusterCountByRapidity,
+void outputPt(ptArray &pt_array, std::map<std::string, double> clusterCountByRapidity,
               const reactionConfig &clusterConfig, const std::string &filename, int total_batch) {
     std::ofstream output_file(filename, std::ios::out);
     if (!output_file.is_open()) {
@@ -31,8 +30,8 @@ void outputPt(std::map<std::string, std::vector<double>> &pt_array,
         output_file << "Rapidity range: " << label
                     << ", cluster yield: " << clusterCountByRapidity[label] / total_batch
                     << std::endl;
-        for (size_t i = 0; i < clusterConfig.ptBins; ++i) {
-            double pt = clusterConfig.dpt / 2 + static_cast<double>(i) * clusterConfig.dpt;
+        for (int i = 0; i < clusterConfig.ptBins; ++i) {
+            double pt = clusterConfig.dpt / 2 + i * clusterConfig.dpt;
             pts[i] /= total_batch;
             output_file << pt << "\t" << pts[i] << std::endl;
         }

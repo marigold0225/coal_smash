@@ -17,27 +17,24 @@ ParticleData dDToAlpha(const ParticleData &d1, const ParticleData &d2,
     double sig      = rms * sqrt(4. / 3.);
     double rap_nucl = alphaConfig.rap_cut_nucl;
     double rap_coal = alphaConfig.rap_cut_coal;
-    double d_pt     = alphaConfig.dpt;
     ParticleData alpha{};
     //Rapidity check
 
     if (std::abs(d1.getRapidity()) > rap_nucl || std::abs(d2.getRapidity()) > rap_nucl) {
-        return ParticleData{};
+        alpha.probability = 0;
+        return alpha;
     }
     //alpha rapidity check
-    const double px_total = d1.px + d2.px;
-    const double py_total = d1.py + d2.py;
-    const double pz_total = d1.pz + d2.pz;
-    const double p0_total = d1.p0 + d2.p0;
-
-    const double rapidity_alpha = calculateParticleRapidity(p0_total, pz_total);
+    alpha.getTwobodyData(d1, d2);
+    const double rapidity_alpha = alpha.getRapidity();
     if (std::abs(rapidity_alpha) > rap_coal) {
-        return ParticleData{};
+        alpha.probability = 0;
+        return alpha;
     }
     //lorentz boost calculate
-    const double beta_x   = px_total / p0_total;
-    const double beta_y   = py_total / p0_total;
-    const double beta_z   = pz_total / p0_total;
+    const double beta_x   = alpha.px / alpha.p0;
+    const double beta_y   = alpha.py / alpha.p0;
+    const double beta_z   = alpha.pz / alpha.p0;
     ParticleData boost_d1 = d1.lorentzBoost(beta_x, beta_y, beta_z);
     ParticleData boost_d2 = d2.lorentzBoost(beta_x, beta_y, beta_z);
     //find t_boost_max in d1 d2
@@ -53,14 +50,12 @@ ParticleData dDToAlpha(const ParticleData &d1, const ParticleData &d2,
     double diff_dp = sqrt(diff_dpx * diff_dpx + diff_dpy * diff_dpy + diff_dpz * diff_dpz);
 
     if (diff_dr > cut_dr * sig || diff_dp > cut_dp * 0.19733 / sig) {
-        return ParticleData{};
+        alpha.probability = 0.0;
+        return alpha;
     }
     alpha.probability = 1.0 / 4 * 8 *
                         exp(-diff_dr * diff_dr / sig / sig - diff_dp * diff_dp * sig * sig / hbar2);
-    alpha.getTwobodyData(d1, d2);
-    const double pt = sqrt(px_total * px_total + py_total * py_total);
-    updateMomentumArray(pt, alpha.probability, d_pt, alphaConfig.ptBins, rapidity_alpha, pt_array,
-                        rapidityRange);
+    updateMomentumArray(alpha, alphaConfig, pt_array, rapidityRange, <#initializer #>);
     return alpha;
 }
 
@@ -107,10 +102,11 @@ void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
 }
 void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string &alphaFile,
                              std::string &ptFile, const reactionConfig &alphaConfig,
-                             ptArray &pt_array, const RapidityMap &rapidityRange) {
+                             const RapidityMap &rapidityRange) {
     double total_alpha = 0.0;
     int total_batches  = 0;
     int ptBins         = alphaConfig.ptBins;
+    ptArray pt_array;
     std::map<std::string, double> clusterCountByRapidity;
     for (auto &[label, _]: rapidityRange) {
         pt_array[label]               = std::vector<double>(ptBins, 0.0);
@@ -228,9 +224,8 @@ ParticleData pPNNToAlpha(const ParticleData &p1, const ParticleData &p2, const P
     }
     alpha_particle.getFourbodyData(boost_p1, boost_p2, boost_n1, boost_n2);
     ParticleData alpha_particle_boost = alpha_particle.lorentzBoost(-beta_x, -beta_y, -beta_z);
-    const double pt                   = sqrt(px_total * px_total + py_total * py_total);
-    updateMomentumArray(pt, alpha_particle_boost.probability, config_input.alpha.dpt,
-                        config_input.alpha.ptBins, rapidity_alpha, pt_array, rapidityRange);
+    updateMomentumArray(alpha_particle, config_input.alpha, pt_array, rapidityRange,
+                        <#initializer #>);
     return alpha_particle_boost;
 }
 
@@ -282,13 +277,13 @@ void processAlphaOneBatch4(const std::vector<ParticleData> &protons,
 
 void calculateAlphaAllBatch4(const std::string &protonFile, const std::string &neutronFile,
                              const std::string &alphaFile, std::string &ptFile,
-                             const config_in &configInput, ptArray &pt_array,
-                             const RapidityMap &rapidityRang) {
+                             const config_in &configInput, const RapidityMap &rapidityRang) {
     BatchMap protonBatches, neutronBatches;
     double total_alpha = 0.0;
     int total_batches  = 0;
     int batchSize      = configInput.mix_events;
     int ptBins         = 10;
+    ptArray pt_array;
     std::map<std::string, double> clusterCountByRapidity;
     for (auto &[label, _]: rapidityRang) {
         pt_array[label]               = std::vector<double>(ptBins, 0.0);

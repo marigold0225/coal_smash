@@ -70,7 +70,7 @@ fig.suptitle(r'Au+Au @ FXT $\sqrt{s_{NN}}=3$ GeV :alpha', fontsize=22)
 
 # Plot the data for each centrality
 for i, centrality in enumerate(centrality_ranges):
-    filename = f'../data/50000/{centrality}/alpha_pt_{centrality}.dat'
+    filename = f'../data/50000/{centrality}/Be0_pt_{centrality}.dat'
     read_and_plot_pt(axs[i], filename, scale_factors, markers)
 
     axs[i].set_title(f'{centrality}%', fontsize=20)

@@ -5,14 +5,15 @@
 
 ParticleData pNToDeutron(const ParticleData &p1, const ParticleData &p2,
                          const reactionConfig &deutronConfig, ptArray &pt_array,
-                         const RapidityMap &rapidityRange);
+                         const RapidityMap &rapidityRange,
+                         std::map<std::string, double> &clusterCountByRapidity);
 
 void DeutronOneBatch(const std::vector<ParticleData> &protons,
                      const std::vector<ParticleData> &neutrons, const reactionConfig &deutronConfig,
                      ptArray &pt_array, const RapidityMap &rapidityRange, double &batch_deutrons,
-                     int eventsInBatch, std::vector<ParticleData> &deutrons);
+                     int eventsInBatch, std::vector<ParticleData> &deutrons,
+                     std::map<std::string, double> &clusterCountByRapidity);
 
 void DeuteronAllBatch(const std::string &protonFile, const std::string &neutronFile,
                       const std::string &deutronFile, const std::string &ptFile,
-                      const config_in &configInput, ptArray &pt_array,
-                      const RapidityMap &rapidityRanges);
+                      const config_in &configInput, const RapidityMap &rapidityRanges);

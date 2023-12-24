@@ -16,7 +16,7 @@ void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
 
 void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string &alphaFile,
                              std::string &ptFile, const reactionConfig &alphaConfig,
-                             ptArray &pt_array, const RapidityMap &rapidityRange);
+                             const RapidityMap &rapidityRange);
 
 ParticleData pPNNToAlpha(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
                          const ParticleData &n2, const config_in &config_input, ptArray &pt_array,
@@ -29,5 +29,4 @@ void processAlphaOneBatch4(const std::vector<ParticleData> &protons,
 
 void calculateAlphaAllBatch4(const std::string &protonFile, const std::string &neutronFile,
                              const std::string &alphaFile, std::string &ptFile,
-                             const config_in &configInput, ptArray &pt_array,
-                             const RapidityMap &rapidityRang);
+                             const config_in &configInput, const RapidityMap &rapidityRang);

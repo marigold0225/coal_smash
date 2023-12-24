@@ -49,15 +49,20 @@ double calculateParticleRapidity(const double p0, const double pz) {
     const double rap = 0.5 * log((p0 + pz) / (p0 - pz));
     return rap;
 }
-void updateMomentumArray(double pt, double probability, double d_pt, int ptBins, double rap,
-                         std::map<std::string, std::vector<double>> &pt_array,
-                         const std::map<std::string, RapidityRange> &rapidityRange) {
+void updateMomentumArray(const ParticleData &particle, const reactionConfig &config,
+                         ptArray &pt_array, const RapidityMap &rapidityRange,
+                         std::map<std::string, double> &clusterCountByRapidity) {
+    double d_pt = config.dpt;
+    int ptBins  = config.ptBins;
+    double pt   = std::sqrt(particle.px * particle.px + particle.py * particle.py);
+    double rap  = particle.getRapidity();
     for (auto &[label, range]: rapidityRange) {
         if (rap >= range.min && rap < range.max) {
             int npt = static_cast<int>(pt / d_pt);
             if (npt < ptBins) {
-                pt_array[label][npt] += probability;
+                pt_array[label][npt] += particle.probability;
             }
+            clusterCountByRapidity[label] += particle.probability;
         }
     }
 }
@@ -159,14 +164,13 @@ std::tuple<double, double, double, double, double, double> fourBodyJacobi(const 
                            diff_dr_p1p2n1n2, diff_dp_p1p2n1n2);
 }
 void calculateProtonPt(const std::string &protonFileName, const std::string &ptFileName,
-                       std::map<std::string, std::vector<double>> &protonPtsByRapidity,
-                       const std::map<std::string, RapidityRange> &rapidityRanges) {
+                       ptArray &protonPt, const RapidityMap &rapidityRanges) {
     double d_pt = 0.2;
     int ptBins  = 10;
 
     std::map<std::string, int> protonCountsByRapidity;
     for (auto &[label, _]: rapidityRanges) {
-        protonPtsByRapidity[label]    = std::vector<double>(ptBins, 0.0);
+        protonPt[label]               = std::vector<double>(ptBins, 0.0);
         protonCountsByRapidity[label] = 0;
     }
     BatchMap protonBatches;
@@ -183,7 +187,7 @@ void calculateProtonPt(const std::string &protonFileName, const std::string &ptF
                 if (rapidity >= range.min && rapidity < range.max) {
                     int npt = static_cast<int>(pt / d_pt);
                     if (npt < ptBins) {
-                        protonPtsByRapidity[label][npt] += 1;
+                        protonPt[label][npt] += 1;
                     }
                     protonCountsByRapidity[label]++;
                     break;
@@ -197,7 +201,7 @@ void calculateProtonPt(const std::string &protonFileName, const std::string &ptF
     if (!output.is_open()) {
         throw std::runtime_error("Could not open file " + ptFileName);
     }
-    for (auto &[label, pts]: protonPtsByRapidity) {
+    for (auto &[label, pts]: protonPt) {
         output << "Rapidity range: " << label << ", Proton yield: "
                << static_cast<double>(protonCountsByRapidity[label]) / total_events << std::endl;
         for (int i = 0; i < ptBins; ++i) {
@@ -216,4 +220,60 @@ RapidityMap defineRapidityRange() {
                                   {"-0.7<y<-0.6", {-0.7, -0.6}}, {"-0.8<y<-0.7", {-0.8, -0.7}},
                                   {"-0.9<y<-0.8", {-0.9, -0.8}}, {"-1.0<y<-0.9", {-1.0, -0.9}}};
     return rapidityRanges;
+}
+void calculateClusterPt(const std::string &clusterFileName, const std::string &ptFileName,
+                        const RapidityMap &rapidityRanges, const reactionConfig &clusterConfig) {
+    double d_pt = clusterConfig.dpt;
+    int ptBins  = clusterConfig.ptBins;
+    ptArray clusterPt;
+    std::map<std::string, double> clusterCountsByRapidity;
+    for (auto &[label, _]: rapidityRanges) {
+        clusterPt[label]               = std::vector<double>(ptBins, 0.0);
+        clusterCountsByRapidity[label] = 0.0;
+    }
+    BatchMap clusterBatches;
+    int total_Batch = 0;
+    readBatchDeutrons(clusterFileName, clusterBatches);
+    for (const auto &[batchNumber, batchData]: clusterBatches) {
+        const auto &clusters = batchData.particles;
+
+        int eventsInBatch = batchData.eventCount;
+        int mixEvents     = eventsInBatch * eventsInBatch;
+        //        int mixEvents     = eventsInBatch * eventsInBatch * eventsInBatch * eventsInBatch *
+        //                        eventsInBatch * eventsInBatch * eventsInBatch * eventsInBatch;
+        for (const auto &cluster: clusters) {
+            double pt       = std::sqrt(cluster.px * cluster.px + cluster.py * cluster.py);
+            double rapidity = cluster.getRapidity();
+
+            for (const auto &[label, range]: rapidityRanges) {
+                if (rapidity >= range.min && rapidity < range.max) {
+                    int npt = static_cast<int>(pt / d_pt);
+                    if (npt < ptBins) {
+                        clusterPt[label][npt] += 1 / static_cast<double>(mixEvents);
+                    }
+                    clusterCountsByRapidity[label] += 1 / static_cast<double>(mixEvents);
+                    break;
+                }
+            }
+        }
+        std::cout << "number of cluster per batch (Batch " << batchNumber
+                  << "): " << clusters.size() << std::endl;
+        total_Batch++;
+    }
+    std::cout << "Total Batch: " << total_Batch << std::endl;
+    std::ofstream output(ptFileName, std::ios::out);
+    if (!output.is_open()) {
+        throw std::runtime_error("Could not open file " + ptFileName);
+    }
+    for (auto &[label, pts]: clusterPt) {
+        output << "Rapidity range: " << label
+               << ", Cluster yield: " << clusterCountsByRapidity[label] / total_Batch << std::endl;
+        for (int i = 0; i < ptBins; ++i) {
+            double pt = d_pt / 2 + i * d_pt;
+            pts[i] /= (2 * M_PI * pt * d_pt * total_Batch);
+            output << pt << "\t" << pts[i] << std::endl;
+        }
+        output << std::endl;
+    }
+    output.close();
 }

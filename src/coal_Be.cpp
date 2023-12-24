@@ -19,7 +19,6 @@ ParticleData he4He4ToBe(const ParticleData &he4_1, const ParticleData &he4_2,
     double sig      = rms * sqrt(4. / 3.);
     double rap_nucl = BeConfig.rap_cut_nucl;
     double rap_coal = BeConfig.rap_cut_coal;
-    double d_pt     = BeConfig.dpt;
     // Rapidity checks
     if (std::abs(he4_1.getRapidity()) > rap_nucl || std::abs(he4_2.getRapidity()) > rap_nucl) {
         return ParticleData{};
@@ -57,14 +56,12 @@ ParticleData he4He4ToBe(const ParticleData &he4_1, const ParticleData &he4_2,
     be_data.probability =
             1. / 4. * 8 * exp(-diff_r * diff_r / sig / sig - diff_p * diff_p * sig * sig / hbar2);
     be_data.getTwobodyData(he4_1, he4_2);
-    const double pt = sqrt(diff_px * diff_px + diff_py * diff_py);
-    updateMomentumArray(pt, be_data.probability, d_pt, BeConfig.ptBins, be_rap, pt_array,
-                        rapidityRange);
+    updateMomentumArray(be_data, BeConfig, pt_array, rapidityRange, <#initializer #>);
     return be_data;
 }
 void processBeOneBatch(const std::vector<ParticleData> &alpha, const reactionConfig &BeConfig,
                        ptArray &pt_array, const RapidityMap &rapidityRange, double &batch_be,
-                       double mixEvents, std::vector<ParticleData> &be) {
+                       int mixEvents, std::vector<ParticleData> &be) {
     be.clear();
     batch_be    = 0.0;
     int ptBins  = BeConfig.ptBins;
@@ -103,10 +100,11 @@ void processBeOneBatch(const std::vector<ParticleData> &alpha, const reactionCon
 }
 void calculateBeAllBatch(const std::string &alphaFile, const std::string &beFile,
                          const std::string &ptFile, const reactionConfig &BeConfig,
-                         ptArray &pt_array, const RapidityMap &rapidityRange) {
+                         const RapidityMap &rapidityRange) {
     double total_be   = 0.0;
     int total_batches = 0;
     int ptBins        = BeConfig.ptBins;
+    ptArray pt_array;
     std::map<std::string, double> clusterCountByRapidity;
     for (auto &[label, _]: rapidityRange) {
         pt_array[label]               = std::vector<double>(ptBins, 0.0);
@@ -121,28 +119,29 @@ void calculateBeAllBatch(const std::string &alphaFile, const std::string &beFile
     for (const auto &[batchNumber, alpha]: alphaBatches) {
         const auto &alphas = alpha.particles;
         int eventInBatch   = alpha.eventCount;
-        double mixEvents   = std::pow(eventInBatch, 8);
+        int mixEvents = eventInBatch * eventInBatch * eventInBatch * eventInBatch * eventInBatch *
+                        eventInBatch * eventInBatch * eventInBatch;
 
         double batch_number_be = 0.0;
         std::vector<ParticleData> batch_be;
         processBeOneBatch(alphas, BeConfig, pt_array, rapidityRange, batch_number_be, mixEvents,
                           batch_be);
+        for (const auto &be: batch_be) {
+            double rapidity = be.getRapidity();
+            for (const auto &[label, range]: rapidityRange) {
+                if (rapidity >= range.min && rapidity < range.max) {
+                    clusterCountByRapidity[label] += 1 / static_cast<double>(mixEvents);
+                    break;
+                }
+            }
+        }
         total_be += batch_number_be / mixEvents;
-        total_batches++;
         if (beOutFile.is_open()) {
             outputCluster(batch_be, eventInBatch, beOutFile);
         }
         std::cout << "Average number of Be per batchNumber (Batch " << batchNumber
                   << "): " << batch_number_be / mixEvents << std::endl;
-        for (const auto &be: batch_be) {
-            double rapidity = be.getRapidity();
-            for (auto &[label, range]: rapidityRange) {
-                if (rapidity >= range.min && rapidity < range.max) {
-                    clusterCountByRapidity[label] += 1.0 / static_cast<double>(mixEvents);
-                    break;
-                }
-            }
-        }
+        total_batches++;
     }
     beOutFile.close();
     const double average_be = total_batches > 0 ? total_be / total_batches : 0.0;

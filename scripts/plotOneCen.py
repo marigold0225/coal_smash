@@ -74,20 +74,20 @@ fig, ax = plt.subplots(figsize=(10, 6))  # 注意这里使用了ax而不是axs
 fig.suptitle(r'Au+Au @ FXT $\sqrt{s_{NN}}=3$ GeV :he4', fontsize=22)
 
 centrality = centrality_ranges[0]
-filename = f'../data/1000/{centrality}/d_pt_{centrality}.dat'  ##p_pt , alpha_pt, d_pt
+filename = f'../data/50000/{centrality}/Be_pt_{centrality}.dat'  ##p_pt , alpha_pt, d_pt
 read_and_plot_pt(ax, filename, scale_factors, markers)
 
 ax.set_title(f'{centrality}%', fontsize=20)
 ax.set_xlabel('Pt (GeV/c)', fontsize=22)
 ax.set_yscale('log')
-ax.set_xlim(d_xlim)
-ax.set_ylim(d_ylim)
+# ax.set_xlim(d_xlim)
+# ax.set_ylim(d_ylim)
 ax.grid(True)
 ax.set_ylabel(r'$d^2N/(2\pi p_T dy dp_t)[(GeV/c)^{-2}]$', fontsize=22)
 
 # 绘制实验数据
-plot_exp_data(ax, d, marker='x', color='r')
-plot_exp_data(ax, d1, marker='x', color='b')
+# plot_exp_data(ax, d, marker='x', color='r')
+# plot_exp_data(ax, d1, marker='x', color='b')
 
 # 添加图例
 ax.legend(loc='upper right')

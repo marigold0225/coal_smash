@@ -14,6 +14,5 @@ void outputCluster(const std::vector<ParticleData> &clusters, int events, std::o
 
 void writeNucleiData(ParticleData &nuclei, std::ofstream &outputFile);
 
-void outputPt(std::map<std::string, std::vector<double>> &pt_array,
-              std::map<std::string, double> clusterCountByRapidity,
+void outputPt(ptArray &pt_array, std::map<std::string, double> clusterCountByRapidity,
               const reactionConfig &clusterConfig, const std::string &filename, int total_batch);

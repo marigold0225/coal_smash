@@ -17,9 +17,9 @@ double samplingAndScalingFactor(const std::vector<ParticleData> &protons,
 
 double calculateParticleRapidity(double p0, double pz);
 
-void updateMomentumArray(double pt, double probability, double d_pt, int ptBins, double rap,
-                         std::map<std::string, std::vector<double>> &pt_array,
-                         const std::map<std::string, RapidityRange> &rapidityRange);
+void updateMomentumArray(const ParticleData &particle, const reactionConfig &config,
+                         ptArray &pt_array, const RapidityMap &rapidityRange,
+                         std::map<std::string, double> &clusterCountByRapidity);
 
 void weightedSampling(std::vector<ParticleData> &sample_particles,
                       std::vector<std::pair<ParticleData, double>> &potential_particles,
@@ -34,5 +34,7 @@ std::tuple<double, double, double, double, double, double> fourBodyJacobi(const 
                                                                           const ParticleData &n2);
 
 void calculateProtonPt(const std::string &protonFileName, const std::string &ptFileName,
-                       std::map<std::string, std::vector<double>> &protonPtsByRapidity,
-                       const std::map<std::string, RapidityRange> &rapidityRanges);
+                       ptArray &protonPt, const RapidityMap &rapidityRanges);
+
+void calculateClusterPt(const std::string &clusterFileName, const std::string &ptFileName,
+                        const RapidityMap &rapidityRanges, const reactionConfig &clusterConfig);

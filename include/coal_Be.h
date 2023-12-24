@@ -12,8 +12,8 @@ ParticleData he4He4ToBe(const ParticleData &he4_1, const ParticleData &he4_2,
 
 void processBeOneBatch(const std::vector<ParticleData> &alpha, const reactionConfig &BeConfig,
                        ptArray &pt_array, const RapidityMap &rapidityRange, double &batch_be,
-                       double mixEvents, std::vector<ParticleData> &be);
+                       int mixEvents, std::vector<ParticleData> &be);
 
 void calculateBeAllBatch(const std::string &alphaFile, const std::string &beFile,
                          const std::string &ptFile, const reactionConfig &BeConfig,
-                         ptArray &pt_array, const RapidityMap &rapidityRange);
+                         const RapidityMap &rapidityRange);
