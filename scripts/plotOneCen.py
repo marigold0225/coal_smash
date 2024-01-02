@@ -51,21 +51,21 @@ particle_configs = {
     'd': {
         'xlim': [0, 4.2],
         'ylim': [10 ** (-9), 10],
-        'file_prefix': 'd3_pt_',
+        'file_prefix': 'd_pt_',
         'file_exp': '../tem/d.dat',
         'label': r'Deutron',
     },
     'he4': {
         'xlim': [0.4, 5.2],
         'ylim': [10 ** (-10), 1],
-        'file_prefix': 'alpha3_pt_',
+        'file_prefix': 'alpha_pt_',
         'file_exp': '../tem/he4.dat',
         'label': r'$^4$He',
     },
     'be': {
         'xlim': [0.4, 5.2],
         'ylim': [10 ** (-13), 10 ** (-4)],
-        'file_prefix': 'Be3_pt_',
+        'file_prefix': 'Be_pt_',
         'file_exp': '../tem/be.dat',
         'label': r'$^8$Be',
     },
@@ -76,10 +76,10 @@ def plot_particle(ax, particle_type, centrality, scale_factors, markers, colors)
     config = particle_configs[particle_type]
     filedata = f'../data/50000/{centrality}/{config["file_prefix"]}{centrality}.dat'
     read_and_plot_pt(ax, filedata, scale_factors, markers, colors, False, dy=0.1)
-    # filedata_exp = f'{config["file_exp"]}'
-    # scale_factor_exp = [1, 1, 1, 1, 1]
-    # markers_exp = ['x', 'x', 'x', 'x', 'x']
-    # read_and_plot_pt(ax, filedata_exp, scale_factor_exp, markers_exp, colors, True, dy=1)
+    filedata_exp = f'{config["file_exp"]}'
+    scale_factor_exp = [1, 1, 1, 1, 1]
+    markers_exp = ['x', 'x', 'x', 'x', 'x']
+    read_and_plot_pt(ax, filedata_exp, scale_factor_exp, markers_exp, colors, True, dy=1)
     ax.set_title(f'{centrality}%-{config["label"]}', fontsize=20)
     ax.set_xlabel('Pt (GeV/c)', fontsize=22)
     ax.set_yscale('log')

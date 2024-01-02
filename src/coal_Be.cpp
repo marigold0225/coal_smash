@@ -54,14 +54,15 @@ ParticleData he4He4ToBe(const ParticleData &he4_1, const ParticleData &he4_2,
         return be_data;
     }
     be_data.probability =
-            1.0 / 4 * 8 * exp(-diff_r * diff_r / sig / sig - diff_p * diff_p * sig * sig / hbar2);
+            1 * 8 * exp(-diff_r * diff_r / sig / sig - diff_p * diff_p * sig * sig / hbar2);
     updateMomentumArray(be_data, BeConfig, pt_array, rapidityRange, clusterCountOneBatch);
     return be_data;
 }
 void processBeOneBatch(const std::vector<ParticleData> &alpha, const reactionConfig &BeConfig,
                        ptArray &pt_array, const RapidityMap &rapidityRange, double &batch_be,
-                       int mixEvents, std::vector<ParticleData> &be,
-                       std::map<std::string, double> &clusterCountByRapidity) {
+                       int mixEvents, std::deque<ParticleData> &be,
+                       std::map<std::string, double> &clusterCountByRapidity, std::mt19937 &gen,
+                       std::uniform_real_distribution<> &dis) {
     be.clear();
     batch_be    = 0.0;
     int ptBins  = BeConfig.ptBins;
@@ -73,8 +74,8 @@ void processBeOneBatch(const std::vector<ParticleData> &alpha, const reactionCon
         clusterCountOneBatch[label] = 0.0;
     }
 
-    std::vector<std::pair<ParticleData, double>> potential_be;
-    std::vector<double> cumulated_probabilities;
+    std::deque<std::pair<ParticleData, double>> potential_be;
+    std::deque<double> cumulated_probabilities;
 
     for (size_t i = 0; i < alpha.size(); i++) {
         for (size_t j = i + 1; j < alpha.size(); j++) {
@@ -88,7 +89,7 @@ void processBeOneBatch(const std::vector<ParticleData> &alpha, const reactionCon
         }
     }
 
-    weightedSampling(be, potential_be, cumulated_probabilities, batch_be);
+    weightedSample(be, potential_be, cumulated_probabilities, batch_be, gen, dis);
 
     for (auto &[label, pts]: batch_pt_array) {
         for (size_t k = 0; k < ptBins; ++k) {
@@ -105,7 +106,8 @@ void processBeOneBatch(const std::vector<ParticleData> &alpha, const reactionCon
 }
 void calculateBeAllBatch(const std::string &alphaFile, const std::string &beFile,
                          const std::string &ptFile, const reactionConfig &BeConfig,
-                         const RapidityMap &rapidityRange) {
+                         const RapidityMap &rapidityRange, std::mt19937 &gen,
+                         std::uniform_real_distribution<> &dis) {
     double total_be   = 0.0;
     int total_batches = 0;
     int ptBins        = BeConfig.ptBins;
@@ -128,13 +130,13 @@ void calculateBeAllBatch(const std::string &alphaFile, const std::string &beFile
                         eventInBatch * eventInBatch * eventInBatch;
 
         double batch_number_be = 0.0;
-        std::vector<ParticleData> batch_be;
+        std::deque<ParticleData> batch_be;
         processBeOneBatch(alphas, BeConfig, pt_array, rapidityRange, batch_number_be, mixEvents,
-                          batch_be, clusterCountByRapidity);
+                          batch_be, clusterCountByRapidity, gen, dis);
         total_be += batch_number_be / mixEvents;
         total_batches++;
         if (beOutFile.is_open()) {
-            outputCluster(batch_be, eventInBatch, beOutFile);
+            outputClusterOther({batch_be, eventInBatch}, beOutFile);
         }
         std::cout << "Average number of Be per batchNumber (Batch " << batchNumber
                   << "): " << batch_number_be / mixEvents << std::endl;

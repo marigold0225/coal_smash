@@ -59,7 +59,8 @@ def read_and_plot_yield(ax_in, filepath, markers_in, rapidity_range, M_particle,
                 ax_in.plot(M_particle, yield_value / g_particle / dy, marker=marker, linestyle='', markersize=8,
                            color=add_color[rapidity_range.index(label)])
 
-    ax_in.text(M_particle, max(yld for _, yld in label_yield_pairs) / g_particle / dy * 2, particle_label, fontsize=16,
+    ax_in.text(M_particle, max(yld for _, yld in label_yield_pairs) / g_particle / dy * 2, particle_label,
+               fontsize=16,
                ha='center', va='bottom')
 
 
@@ -75,19 +76,19 @@ fig.suptitle('Particle Yield for Different Rapidity Ranges in 0-10 Centrality')
 fileProton = f'../data/50000/{centrality}/p_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileProton, markers, rapidity_ranges, M_proton, g_proton, 'p', True, colors)
 
-fileDeutron = f'../data/50000/{centrality}/d3_pt_{centrality}.dat'
+fileDeutron = f'../data/50000/{centrality}/d_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileDeutron, markers, rapidity_ranges, M_deutron, g_deutron, 'd', False, colors)
 
-fileAlpha = f'../data/50000/{centrality}/alpha3_pt_{centrality}.dat'
+fileAlpha = f'../data/50000/{centrality}/alpha_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileAlpha, markers, rapidity_ranges, M_alpha, g_alpha, r'$^4$He', False, colors)
 
-fileBe = f'../data/50000/{centrality}/Be3_pt_{centrality}.dat'
+fileBe = f'../data/50000/{centrality}/Be_pt_{centrality}.dat'
 read_and_plot_yield(ax, fileBe, markers, rapidity_ranges, M_Be, g_be, 'Be', False, colors)
 
 # Set plot properties
 ax.set_title(f'Au+Au {centrality}% 3GeV', fontsize=20)
 ax.set_xlabel('Mass (GeV/c²)', fontsize=22)
-ax.set_xlim(0.5, 8.5)
+ax.set_xlim(0.5, 9)
 ax.set_yscale('log')
 ax.set_ylim(1e-7, 200)
 # add experimental data

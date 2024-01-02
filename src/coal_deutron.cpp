@@ -62,15 +62,16 @@ ParticleData pNToDeutron(const ParticleData &p1, const ParticleData &p2,
 void DeutronOneBatch(const std::vector<ParticleData> &protons,
                      const std::vector<ParticleData> &neutrons, const reactionConfig &deutronConfig,
                      ptArray &pt_array, const RapidityMap &rapidityRange, double &batch_deutrons,
-                     int eventsInBatch, std::vector<ParticleData> &deutrons,
-                     std::map<std::string, double> &clusterCountByRapidity) {
+                     int eventsInBatch, std::deque<ParticleData> &deutrons,
+                     std::map<std::string, double> &clusterCountByRapidity, std::mt19937 &gen,
+                     std::uniform_real_distribution<> &dis) {
     deutrons.clear();
     batch_deutrons      = 0.0;
     double d_pt         = deutronConfig.dpt;
     int ptBins          = deutronConfig.ptBins;
     const int mixEvents = eventsInBatch * eventsInBatch;
-    std::vector<std::pair<ParticleData, double>> potential_deutrons;
-    std::vector<double> cumulative_probabilities;
+    std::deque<std::pair<ParticleData, double>> potential_deutrons;
+    std::deque<double> cumulative_probabilities;
     ptArray batch_pt_array;
     std::map<std::string, double> clusterCountOneBatch;
     for (auto &[label, _]: rapidityRange) {
@@ -90,7 +91,8 @@ void DeutronOneBatch(const std::vector<ParticleData> &protons,
         }
     }
 
-    weightedSampling(deutrons, potential_deutrons, cumulative_probabilities, batch_deutrons);
+    weightedSample(deutrons, potential_deutrons, cumulative_probabilities, batch_deutrons, gen,
+                   dis);
 
     for (auto &[label, pts]: batch_pt_array) {
         for (size_t k = 0; k < ptBins; ++k) {
@@ -106,7 +108,8 @@ void DeutronOneBatch(const std::vector<ParticleData> &protons,
 
 void DeuteronAllBatch(const std::string &protonFile, const std::string &neutronFile,
                       const std::string &deutronFile, const std::string &ptFile,
-                      const config_in &configInput, const RapidityMap &rapidityRanges) {
+                      const config_in &configInput, const RapidityMap &rapidityRanges,
+                      std::mt19937 &gen, std::uniform_real_distribution<> &dis) {
     BatchMap protonBatches, neutronBatches;
     double total_deutrons = 0.0;
     int total_batches     = 0;
@@ -128,21 +131,12 @@ void DeuteronAllBatch(const std::string &protonFile, const std::string &neutronF
         const auto &neutrons      = neutronBatches[batchNumber].particles;
         double num_batch_deutrons = 0.0;
         const int eventsInBatch   = batchData.eventCount;
-        std::vector<ParticleData> batchDeutrons{};
+        std::deque<ParticleData> batchDeutrons{};
         DeutronOneBatch(protons, neutrons, configInput.deuteron, pt_array, rapidityRanges,
-                        num_batch_deutrons, eventsInBatch, batchDeutrons, deutronCountByRapidity);
-        //        for (const auto &deuteron: batchDeutrons) {
-        //            double rapidity = deuteron.getRapidity();
-        //            for (const auto &[label, range]: rapidityRanges) {
-        //                if (rapidity >= range.min && rapidity < range.max) {
-        //                    deutronCountByRapidity[label] +=
-        //                            1.0 / static_cast<double>(eventsInBatch) / eventsInBatch;
-        //                    break;
-        //                }
-        //            }
-        //        }
+                        num_batch_deutrons, eventsInBatch, batchDeutrons, deutronCountByRapidity,
+                        gen, dis);
         if (output.is_open()) {
-            outputCluster(batchDeutrons, eventsInBatch, output);
+            outputClusterOther({batchDeutrons, eventsInBatch}, output);
         }
         std::cout << "number of deutron per batch (Batch " << batchNumber
                   << "): " << batchDeutrons.size() << std::endl;
@@ -154,3 +148,41 @@ void DeuteronAllBatch(const std::string &protonFile, const std::string &neutronF
     std::cout << "Average number of deuteron per event: " << average_deutrons << std::endl;
     outputPt(pt_array, deutronCountByRapidity, configInput.deuteron, ptFile, total_batches);
 }
+//void deutronAllBatchRandom(const std::string &protonFile, const std::string &neutronFile,
+//                           const std::string &deutronFile, const std::string &ptFile,
+//                           const config_in &configInput, const RapidityMap &rapidityRanges,
+//                           std::mt19937 &gen, std::uniform_real_distribution<> &dis) {
+//    std::vector<BatchData> protonsAll, neutronsAll;
+//    double total_deutrons = 0.0;
+//    int total_batches     = 0;
+//    int batchSize         = configInput.mix_events;
+//    int ptBins            = configInput.deuteron.ptBins;
+//    ptArray pt_array;
+//    std::map<std::string, double> deutronCountByRapidity;
+//    for (auto &[label, _]: rapidityRanges) {
+//        pt_array[label]               = std::vector<double>(ptBins, 0.0);
+//        deutronCountByRapidity[label] = 0.0;
+//    }
+//
+//    readALlNuclei(protonFile, protonsAll);
+//    readALlNuclei(neutronFile, neutronsAll);
+//    std::ofstream output(deutronFile, std::ios::out);
+//
+//    for (const auto &[batchNumber, batchData]: protonsAll) {
+//        const auto &protons       = batchData.particles;
+//        const auto &neutrons      = neutronsAll[batchNumber].particles;
+//        double num_batch_deutrons = 0.0;
+//        const int eventsInBatch   = batchData.eventCount;
+//        std::deque<ParticleData> batchDeutrons{};
+//        DeutronOneBatch(protons, neutrons, configInput.deuteron, pt_array, rapidityRanges,
+//                        num_batch_deutrons, eventsInBatch, batchDeutrons, deutronCountByRapidity,
+//                        gen, dis);
+//        if (output.is_open()) {
+//            outputClusterOther({batchDeutrons, eventsInBatch}, output);
+//        }
+//        std::cout << "number of deutron per batch (Batch " << batchNumber
+//                  << "): " << batchDeutrons.size() << std::endl;
+//        total_deutrons += num_batch_deutrons / eventsInBatch / eventsInBatch;
+//        total_batches++;
+//    }
+//}

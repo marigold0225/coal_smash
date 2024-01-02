@@ -9,16 +9,24 @@ void writeNucleiData(ParticleData &nuclei, std::ofstream &outputFile) {
                << nuclei.px << " " << nuclei.py << " " << nuclei.pz << " " << nuclei.p0 << " "
                << nuclei.mass << " " << nuclei.freeze_out_time << "\n";
 }
+//void outputCluster(const std::vector<ParticleData> &clusters, int events, std::ofstream &output) {
+//    output << "Number of events: " << events << "\n";
+//    output << "t x y z px py pz p0 mass probability\n";
+//    for (const auto &cluster: clusters) {
+//        output << cluster.freeze_out_time << " " << cluster.x << " " << cluster.y << " "
+//               << cluster.z << " " << cluster.px << " " << cluster.py << " " << cluster.pz << " "
+//               << cluster.p0 << " " << cluster.mass << " " << cluster.probability << "\n";
+//    }
+//}
 void outputCluster(const std::vector<ParticleData> &clusters, int events, std::ofstream &output) {
-    output << "Number of events: " << events << "\n";
-    output << "t x y z px py pz p0 mass probability\n";
+    output << events << " " << clusters.size() << " " << 0 << " " << 0 << " " << 0 << " " << 0
+           << " " << 0 << " " << 0 << " " << 0 << " " << 0 << "\n";
     for (const auto &cluster: clusters) {
-        output << cluster.freeze_out_time << " " << cluster.x << " " << cluster.y << " "
-               << cluster.z << " " << cluster.px << " " << cluster.py << " " << cluster.pz << " "
-               << cluster.p0 << " " << cluster.mass << " " << cluster.probability << "\n";
+        output << 4 << " " << cluster.px << " " << cluster.py << " " << cluster.pz << " "
+               << cluster.mass << " " << cluster.x << " " << cluster.y << " " << cluster.z << " "
+               << cluster.freeze_out_time << " " << cluster.probability << "\n";
     }
 }
-
 
 void outputPt(ptArray &pt_array, std::map<std::string, double> clusterCountByRapidity,
               const reactionConfig &clusterConfig, const std::string &filename, int total_batch) {
@@ -38,4 +46,19 @@ void outputPt(ptArray &pt_array, std::map<std::string, double> clusterCountByRap
         output_file << std::endl;
     }
     output_file.close();
+}
+void outputClusterOther(const std::pair<std::deque<ParticleData>, int> &cluster_event,
+                        std::ofstream &output) {
+    //    output << "Number of events: " << cluster_event.second << "\n";
+    //    output << "t x y z px py pz p0 mass probability\n";
+    output << cluster_event.second << " " << cluster_event.first.size() << " " << 0 << " " << 0
+           << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << "\n";
+    for (const auto &cluster: cluster_event.first) {
+        //        output << cluster.freeze_out_time << " " << cluster.x << " " << cluster.y << " "
+        //               << cluster.z << " " << cluster.px << " " << cluster.py << " " << cluster.pz << " "
+        //               << cluster.p0 << " " << cluster.mass << " " << cluster.probability << "\n";
+        output << 4 << " " << cluster.px << " " << cluster.py << " " << cluster.pz << " "
+               << cluster.mass << " " << cluster.x << " " << cluster.y << " " << cluster.z << " "
+               << cluster.freeze_out_time << " " << cluster.probability << "\n";
+    }
 }

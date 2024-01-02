@@ -45,6 +45,8 @@ bool checkFileExists(const std::string &filename, std::vector<std::string> &labe
 
 void readBatchNuclei(const std::string &filename, int batchSize, BatchMap &batch_nuclei);
 
+void readALlNuclei(const std::string &filename, std::vector<BatchData> &nuclei);
+
 void readBatchDeutrons(const std::string &filename, BatchMap &batch_deutrons);
 
 void writeParticlesNoCentrality(std::map<int, EventData> &all_Events,

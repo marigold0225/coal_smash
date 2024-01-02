@@ -5,7 +5,8 @@
 
 
 void handleCentralityCalculations(const std::string &input_particle_filename,
-                                  const std::string &dataOutputDir, const config_in &config) {
+                                  const std::string &dataOutputDir, const config_in &config,
+                                  std::mt19937 &gen, std::uniform_real_distribution<> &dis) {
 
     std::cout << "Centrality calculations being performed..." << std::endl;
 
@@ -56,43 +57,51 @@ void handleCentralityCalculations(const std::string &input_particle_filename,
     //Deutron calculations
     if (config.coalescenceSwitch.rac_deuteron) {
         for (const auto &label: centralityLabels) {
-            std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
-            std::string neutronFileName  = constructFilename(dataOutputDir, "neutron", label);
-            std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
-            std::string ptFileName       = constructFilename(dataOutputDir, "d3_pt", label);
-            std::cout << "Calculating deutron for centrality " << label << std::endl;
-            DeuteronAllBatch(protonFileName, neutronFileName, deuteronFileName, ptFileName, config,
-                             rapidityRanges);
+            if (label == "0-10") {
+                std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
+                std::string neutronFileName  = constructFilename(dataOutputDir, "neutron", label);
+                std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
+                std::string ptFileName       = constructFilename(dataOutputDir, "d_pt", label);
+                std::cout << "Calculating deutron for centrality " << label << std::endl;
+                DeuteronAllBatch(protonFileName, neutronFileName, deuteronFileName, ptFileName,
+                                 config, rapidityRanges, gen, dis);
+            }
         }
     }
     //    //alpha calculations
     if (config.coalescenceSwitch.rac_helium4) {
         for (const auto &label: centralityLabels) {
-            std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
-            std::string neutronFileName  = constructFilename(dataOutputDir, "neutron", label);
-            std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
-            std::string alphaFileName    = constructFilename(dataOutputDir, "alpha", label);
-            std::string ptFileName       = constructFilename(dataOutputDir, "alpha3_pt", label);
-            std::cout << "Calculating alpha for centrality " << label << std::endl;
-            //                calculateAlphaAllBatch4(protonFileName, neutronFileName, alphaFileName, ptFileName,
-            //                                         config, alpha_pt, rapidityRanges);
-            calculateAlphaAllBatch2(deuteronFileName, alphaFileName, ptFileName, config.alpha,
-                                    rapidityRanges);
+            if (label == "0-10") {
+                std::string protonFileName   = constructFilename(dataOutputDir, "proton", label);
+                std::string neutronFileName  = constructFilename(dataOutputDir, "neutron", label);
+                std::string deuteronFileName = constructFilename(dataOutputDir, "deuteron", label);
+                std::string alphaFileName = constructFilename(dataOutputDir, "alpha_matlab", label);
+                std::string ptFileName    = constructFilename(dataOutputDir, "alpha_pt", label);
+                std::cout << "Calculating alpha for centrality " << label << std::endl;
+                //                calculateAlphaAllBatch4(protonFileName, neutronFileName, alphaFileName, ptFileName,
+                //                                         config, alpha_pt, rapidityRanges);
+                calculateAlphaAllBatch2(deuteronFileName, alphaFileName, ptFileName, config.alpha,
+                                        rapidityRanges, gen, dis);
+            }
         }
     }
     if (config.coalescenceSwitch.rac_Be) {
         for (const auto &label: centralityLabels) {
-            std::string alphaFileName = constructFilename(dataOutputDir, "alpha", label);
-            std::string beFileName    = constructFilename(dataOutputDir, "Be", label);
-            std::string ptFileName    = constructFilename(dataOutputDir, "Be3_pt", label);
-            std::cout << "Calculating Be for centrality " << label << std::endl;
-            calculateBeAllBatch(alphaFileName, beFileName, ptFileName, config.Be, rapidityRanges);
+            if (label == "0-10") {
+                std::string alphaFileName = constructFilename(dataOutputDir, "alpha", label);
+                std::string beFileName    = constructFilename(dataOutputDir, "Be", label);
+                std::string ptFileName    = constructFilename(dataOutputDir, "Be_pt", label);
+                std::cout << "Calculating Be for centrality " << label << std::endl;
+                calculateBeAllBatch(alphaFileName, beFileName, ptFileName, config.Be,
+                                    rapidityRanges, gen, dis);
+            }
         }
     }
     std::cout << "Centrality calculations completed." << std::endl;
 }
 void handleNoCentralityCalculations(const std::string &input_particle_filename,
-                                    const std::string &dataOutputDir, const config_in &config) {
+                                    const std::string &dataOutputDir, const config_in &config,
+                                    std::mt19937 &gen, std::uniform_real_distribution<> &dis) {
 
     std::cout << "Centrality calculations not being performed..." << std::endl;
     auto rapidityRanges = defineRapidityRange();
@@ -123,7 +132,7 @@ void handleNoCentralityCalculations(const std::string &input_particle_filename,
         std::string ptFileName       = dataOutputDir + "/d_pt.dat";
         std::cout << "Calculating deutron for no centrality..." << std::endl;
         DeuteronAllBatch(protonFileName, neutronFileName, deuteronFileName, ptFileName, config,
-                         rapidityRanges);
+                         rapidityRanges, gen, dis);
     }
     if (config.coalescenceSwitch.rac_helium4) {
         std::string deuteronFileName = dataOutputDir + "/deuteron.dat";
@@ -131,14 +140,15 @@ void handleNoCentralityCalculations(const std::string &input_particle_filename,
         std::string ptFileName       = dataOutputDir + "/alpha_pt.dat";
         std::cout << "Calculating alpha for no centrality..." << std::endl;
         calculateAlphaAllBatch2(deuteronFileName, alphaFileName, ptFileName, config.alpha,
-                                rapidityRanges);
+                                rapidityRanges, gen, dis);
     }
     if (config.coalescenceSwitch.rac_Be) {
         std::string alphaFileName = dataOutputDir + "/alpha.dat";
         std::string beFileName    = dataOutputDir + "/Be.dat";
         std::string ptFileName    = dataOutputDir + "/Be_pt.dat";
         std::cout << "Calculating Be for no centrality..." << std::endl;
-        calculateBeAllBatch(alphaFileName, beFileName, ptFileName, config.Be, rapidityRanges);
+        calculateBeAllBatch(alphaFileName, beFileName, ptFileName, config.Be, rapidityRanges, gen,
+                            dis);
     }
     std::cout << "No centrality calculations completed." << std::endl;
 }

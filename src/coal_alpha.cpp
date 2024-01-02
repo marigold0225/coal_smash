@@ -54,7 +54,8 @@ ParticleData dDToAlpha(const ParticleData &d1, const ParticleData &d2,
         alpha.probability = 0.0;
         return alpha;
     }
-    alpha.probability = 1.0 / 4 * 8 *
+    //gc = (2j_a+1)/(2j_d+1)^2
+    alpha.probability = 1.0 / 9 * 8 *
                         exp(-diff_dr * diff_dr / sig / sig - diff_dp * diff_dp * sig * sig / hbar2);
     updateMomentumArray(alpha, alphaConfig, pt_array, rapidityRange, clusterCountByRapidity);
     return alpha;
@@ -63,8 +64,9 @@ ParticleData dDToAlpha(const ParticleData &d1, const ParticleData &d2,
 void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
                            const reactionConfig &alphaConfig, ptArray &pt_array,
                            const RapidityMap &rapidityRange, double &batch_alpha, int mixEvents,
-                           std::vector<ParticleData> &alpha,
-                           std::map<std::string, double> &clusterCountByRapidity) {
+                           std::deque<ParticleData> &alpha,
+                           std::map<std::string, double> &clusterCountByRapidity, std::mt19937 &gen,
+                           std::uniform_real_distribution<> &dis) {
     alpha.clear();
     batch_alpha = 0.0;
     int ptBins  = alphaConfig.ptBins;
@@ -76,8 +78,8 @@ void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
         alphaCountByRapidity[label] = 0.0;
     }
 
-    std::vector<std::pair<ParticleData, double>> potential_alpha;
-    std::vector<double> cumulated_probabilities;
+    std::deque<std::pair<ParticleData, double>> potential_alpha;
+    std::deque<double> cumulated_probabilities;
 
     for (size_t i = 0; i < deutrons.size(); i++) {
         for (size_t j = i + 1; j < deutrons.size(); j++) {
@@ -92,7 +94,7 @@ void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
         }
     }
 
-    weightedSampling(alpha, potential_alpha, cumulated_probabilities, batch_alpha);
+    weightedSample(alpha, potential_alpha, cumulated_probabilities, batch_alpha, gen, dis);
 
     for (auto &[label, pts]: batch_pt_array) {
         for (size_t k = 0; k < ptBins; ++k) {
@@ -109,7 +111,8 @@ void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
 }
 void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string &alphaFile,
                              std::string &ptFile, const reactionConfig &alphaConfig,
-                             const RapidityMap &rapidityRange) {
+                             const RapidityMap &rapidityRange, std::mt19937 &gen,
+                             std::uniform_real_distribution<> &dis) {
     double total_alpha = 0.0;
     int total_batches  = 0;
     int ptBins         = alphaConfig.ptBins;
@@ -131,25 +134,16 @@ void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string 
         int mixEvents        = eventInBatch * eventInBatch * eventInBatch * eventInBatch;
 
         double batch_number_alpha = 0.0;
-        std::vector<ParticleData> batch_alpha;
+        std::deque<ParticleData> batch_alpha;
         processAlphaOneBatch2(deutrons, alphaConfig, pt_array, rapidityRange, batch_number_alpha,
-                              mixEvents, batch_alpha, clusterCountByRapidity);
+                              mixEvents, batch_alpha, clusterCountByRapidity, gen, dis);
         total_alpha += batch_number_alpha / mixEvents;
         total_batches++;
         if (alphaFileOut.is_open()) {
-            outputCluster(batch_alpha, eventInBatch, alphaFileOut);
+            outputClusterOther({batch_alpha, eventInBatch}, alphaFileOut);
         }
         std::cout << "Average number of alpha per batch (Batch " << batchNumber
                   << "): " << batch_number_alpha / mixEvents << std::endl;
-        //        for (const auto &alpha: batch_alpha) {
-        //            double rapidity = alpha.getRapidity();
-        //            for (const auto &[label, range]: rapidityRange) {
-        //                if (rapidity >= range.min && rapidity < range.max) {
-        //                    clusterCountByRapidity[label] += 1.0 / static_cast<double>(mixEvents);
-        //                    break;
-        //                }
-        //            }
-        //        }
     }
 
     alphaFileOut.close();

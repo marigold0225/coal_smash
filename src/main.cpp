@@ -9,8 +9,8 @@ int main() {
 
     std::cout << "Current path is " << std::filesystem::current_path() << std::endl;
     const std::string input_config_filename   = "input/config.ini";
-    const std::string input_particle_filename = "data/50000/particle_lists.oscar";
-    const std::string dataOutputDir           = "data/50000";
+    const std::string input_particle_filename = "data/1000/particle_lists.oscar";
+    const std::string dataOutputDir           = "data/1000";
 
     checkAndCreateDataOutputDir(dataOutputDir);
     if (!fileExistsInCurrentDir(input_config_filename) ||
@@ -20,11 +20,15 @@ int main() {
 
     config_in config = readAndParseConfig(input_config_filename);
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0.0, 1.0);
+
     if (config.needCentrality) {
-        handleCentralityCalculations(input_particle_filename, dataOutputDir, config);
+        handleCentralityCalculations(input_particle_filename, dataOutputDir, config, gen, dis);
 
     } else {
-        handleNoCentralityCalculations(input_particle_filename, dataOutputDir, config);
+        handleNoCentralityCalculations(input_particle_filename, dataOutputDir, config, gen, dis);
     }
 
     return 0;

@@ -314,3 +314,41 @@ void checkAndCreateDataOutputDir(const std::string &outputDir) {
 bool fileExistsInCurrentDir(const std::string &filename) {
     return std::filesystem::exists(std::filesystem::current_path() / filename);
 }
+
+void readALlNuclei(const std::string &filename, std::vector<BatchData> &nuclei) {
+    std::ifstream file(filename);
+    std::string line;
+    ParticleData particle{};
+    int eventCount = 0;
+    BatchData currentBatch;
+
+    while (std::getline(file, line)) {
+        if (line.find("t x y z px py pz p0 mass t_out") != std::string::npos) {
+            if (!currentBatch.particles.empty()) {
+                currentBatch.eventCount = eventCount;
+                nuclei.push_back(currentBatch);
+                currentBatch = BatchData{};
+            }
+            eventCount = 0;
+            continue;
+        }
+        if (std::istringstream iss(line); iss >> particle.t >> particle.x >> particle.y >>
+                                          particle.z >> particle.px >> particle.py >> particle.pz >>
+                                          particle.p0 >> particle.mass >>
+                                          particle.freeze_out_time) {
+            if (filename.find("proton") != std::string::npos) {
+                particle.pdg    = 2212;
+                particle.charge = 1;
+            } else if (filename.find("neutron") != std::string::npos) {
+                particle.pdg    = 2112;
+                particle.charge = 0;
+            }
+            currentBatch.particles.push_back(particle);
+            eventCount++;
+        }
+    }
+    if (!currentBatch.particles.empty()) {
+        currentBatch.eventCount = eventCount;
+        nuclei.push_back(currentBatch);
+    }
+}

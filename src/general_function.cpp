@@ -112,6 +112,7 @@ std::tuple<double, double, double, double, double, double> fourBodyJacobi(const 
                                                                           const ParticleData &p2,
                                                                           const ParticleData &n1,
                                                                           const ParticleData &n2) {
+    //p1+p2
     double dx_p1p2      = (p1.x - p2.x) / sqrt(2.0);
     double dy_p1p2      = (p1.y - p2.y) / sqrt(2.0);
     double dz_p1p2      = (p1.z - p2.z) / sqrt(2.0);
@@ -120,7 +121,7 @@ std::tuple<double, double, double, double, double, double> fourBodyJacobi(const 
     double dpz_p1p2     = (p2.mass * p1.pz - p1.mass * p2.pz) / (p1.mass + p2.mass) * sqrt(2.0);
     double diff_dr_p1p2 = sqrt(dx_p1p2 * dx_p1p2 + dy_p1p2 * dy_p1p2 + dz_p1p2 * dz_p1p2);
     double diff_dp_p1p2 = sqrt(dpx_p1p2 * dpx_p1p2 + dpy_p1p2 * dpy_p1p2 + dpz_p1p2 * dpz_p1p2);
-
+    //p1+p2+n1
     double dx_p1p2n1 = (p1.mass * p1.x + p2.mass * p2.x - (p1.mass + p2.mass) * n1.x) /
                        (p1.mass + p2.mass) * sqrt(2.0 / 3.0);
     double dy_p1p2n1 = (p1.mass * p1.y + p2.mass * p2.y - (p1.mass + p2.mass) * n1.y) /
@@ -137,7 +138,7 @@ std::tuple<double, double, double, double, double, double> fourBodyJacobi(const 
             sqrt(dx_p1p2n1 * dx_p1p2n1 + dy_p1p2n1 * dy_p1p2n1 + dz_p1p2n1 * dz_p1p2n1);
     double diff_dp_p1p2n1 =
             sqrt(dpx_p1p2n1 * dpx_p1p2n1 + dpy_p1p2n1 * dpy_p1p2n1 + dpz_p1p2n1 * dpz_p1p2n1);
-
+    //p1+p2+n1+n2
     double dx_p1p2n1n2 = (p1.mass * p1.x + p2.mass * p2.x + n1.mass * n1.x -
                           (p1.mass + p2.mass + n1.mass) * n2.x) /
                          (p1.mass + p2.mass + n1.mass) * sqrt(3.0 / 4.0);
@@ -276,4 +277,49 @@ void calculateClusterPt(const std::string &clusterFileName, const std::string &p
         output << std::endl;
     }
     output.close();
+}
+void weightedSample(std::deque<ParticleData> &sample_particles,
+                    std::deque<std::pair<ParticleData, double>> &potential_particles,
+                    std::deque<double> &cumulative_probabilities, double number_of_particles,
+                    std::mt19937 &gen, std::uniform_real_distribution<> &dis) {
+    if (potential_particles.empty() || cumulative_probabilities.empty()) {
+        return;
+    }
+
+    int expected_particles = static_cast<int>(number_of_particles);
+    double fraction        = number_of_particles - expected_particles;
+    if (dis(gen) < fraction) {
+        expected_particles++;
+    }
+
+    //Generate a low-discrepancy sequence using van der Corput method
+    //https://en.wikipedia.org/wiki/Low-discrepancy_sequence
+    std::vector<double> random_numbers(expected_particles);
+    for (int i = 1; i <= expected_particles; i++) {
+        int reversed_bits = 0;
+        int n             = i;
+        while (n > 0) {
+            reversed_bits = (reversed_bits << 1) | (n & 1);
+            n >>= 1;
+        }
+        random_numbers[i - 1] =
+                (i + reversed_bits / static_cast<double>(expected_particles)) / expected_particles;
+    }
+
+    //Resample the particles using the low-discrepancy sequence
+    double upper_bound = cumulative_probabilities.back();
+    auto it            = cumulative_probabilities.begin();
+    for (double random_number: random_numbers) {
+        random_number *= upper_bound;
+        while (it != cumulative_probabilities.end() && *it < random_number) {
+            it++;
+        }
+        if (it != cumulative_probabilities.end()) {
+            size_t index = std::distance(cumulative_probabilities.begin(), it);
+            sample_particles.push_back(potential_particles[index].first);
+            cumulative_probabilities.erase(it);
+            potential_particles.erase(potential_particles.begin() +
+                                      static_cast<std::ptrdiff_t>(index));
+        }
+    }
 }

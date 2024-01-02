@@ -13,12 +13,14 @@ ParticleData dDToAlpha(const ParticleData &d1, const ParticleData &d2,
 void processAlphaOneBatch2(const std::vector<ParticleData> &deutrons,
                            const reactionConfig &alphaConfig, ptArray &pt_array,
                            const RapidityMap &rapidityRange, double &batch_alpha, int mixEvents,
-                           std::vector<ParticleData> &alpha,
-                           std::map<std::string, double> &clusterCountByRapidity);
+                           std::deque<ParticleData> &alpha,
+                           std::map<std::string, double> &clusterCountByRapidity, std::mt19937 &gen,
+                           std::uniform_real_distribution<> &dis);
 
 void calculateAlphaAllBatch2(const std::string &deuteronFile, const std::string &alphaFile,
                              std::string &ptFile, const reactionConfig &alphaConfig,
-                             const RapidityMap &rapidityRange);
+                             const RapidityMap &rapidityRange, std::mt19937 &gen,
+                             std::uniform_real_distribution<> &dis);
 
 ParticleData pPNNToAlpha(const ParticleData &p1, const ParticleData &p2, const ParticleData &n1,
                          const ParticleData &n2, const config_in &config_input, ptArray &pt_array,

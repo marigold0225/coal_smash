@@ -10,7 +10,9 @@
 #include "read_particle_data.h"
 
 void handleCentralityCalculations(const std::string &input_particle_filename,
-                                  const std::string &dataOutputDir, const config_in &config);
+                                  const std::string &dataOutputDir, const config_in &config,
+                                  std::mt19937 &gen, std::uniform_real_distribution<> &dis);
 
 void handleNoCentralityCalculations(const std::string &input_particle_filename,
-                                    const std::string &dataOutputDir, const config_in &config);
+                                    const std::string &dataOutputDir, const config_in &config,
+                                    std::mt19937 &gen, std::uniform_real_distribution<> &dis);

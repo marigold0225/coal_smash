@@ -4,6 +4,7 @@
 #pragma once
 #include "particle.h"
 #include "read_config.h"
+#include <deque>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -11,6 +12,8 @@
 
 void outputCluster(const std::vector<ParticleData> &clusters, int events, std::ofstream &output);
 
+void outputClusterOther(const std::pair<std::deque<ParticleData>, int> &cluster_event,
+                        std::ofstream &output);
 
 void writeNucleiData(ParticleData &nuclei, std::ofstream &outputFile);
 

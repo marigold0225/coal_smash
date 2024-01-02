@@ -25,7 +25,7 @@ particle_configs = {
     'd': {
         'xlim': [0, 4.2],
         'ylim': [10 ** (-12), 10],
-        'file_prefix': 'd3_pt_',
+        'file_prefix': 'd_pt_',
         'file_exp': '../tem/d.dat',
         'label': r'Deutron',
     },
